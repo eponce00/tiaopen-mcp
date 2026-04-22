@@ -37,7 +37,7 @@ Restart the MCP server after any change to `src/`.
 | `get_block_xml` | Export a block as XML |
 | `build_lad_block` | Generate and import a LAD FB/FC/OB from a JSON flow description |
 | `write_block` | Import a raw XML file into TIA |
-| `delete_block` | Delete a block by name |
+| `delete_item` | Delete any named item: block (FB/FC/OB/DB), UDT, or data type |
 | `compile` | Compile all PLC blocks and return per-block errors with network paths |
 | `create_global_db` | Create an empty global DB |
 | `create_instance_db` | Create an instance DB for a user FB |

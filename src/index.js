@@ -56,8 +56,8 @@ const schemas = {
       'PowerShell param names → values. BlockName is required. See tool description for all valid keys.'),
   },
   list_templates: {},
-  delete_block: {
-    block_name: z.string().describe('Name of the block to delete, e.g. "FC_Old".'),
+  delete_item: {
+    name: z.string().describe('Name of the item to delete, e.g. "FC_Old", "UDT_MyType".'),
   },
   preview_block: {
     template: z.string().describe('Template path, e.g. "lad/contact-coil".'),

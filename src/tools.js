@@ -1222,17 +1222,17 @@ OR parallel block:
   },
 
   {
-    name: 'delete_block',
-    description: 'Delete a PLC block by name from the open TIA Portal project. Returns confirmation JSON.',
+    name: 'delete_item',
+    description: 'Delete any named item from the open TIA Portal project: PLC blocks (FB/FC/OB/DB), PLC data types (UDT), or — in future — tags and tag tables. Searches recursively through all groups. Returns confirmation JSON with the Kind of item deleted.',
     inputSchema: {
       type: 'object',
       properties: {
-        block_name: { type: 'string', description: 'Name of the block to delete, e.g. "FC_Old".' },
+        name: { type: 'string', description: 'Name of the item to delete, e.g. "FC_Old", "UDT_MyType".' },
       },
-      required: ['block_name'],
+      required: ['name'],
     },
-    handler: async ({ block_name }) => {
-      const result = await runPs(join(SCRIPTS, 'delete-block.ps1'), ['-BlockName', block_name]);
+    handler: async ({ name }) => {
+      const result = await runPs(join(SCRIPTS, 'delete-item.ps1'), ['-BlockName', name]);
       return JSON.stringify(result, null, 2);
     },
   },
