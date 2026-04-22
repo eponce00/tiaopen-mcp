@@ -31,6 +31,9 @@ const schemas = {
   write_scl_block: {
     scl_path: z.string().describe('Absolute path to the .scl file to import.'),
   },
+  preflight_scl: {
+    scl_path: z.string().describe('Absolute path to the .scl file to validate.'),
+  },
   compile: {},
   list_tags: {},
   add_tag: {

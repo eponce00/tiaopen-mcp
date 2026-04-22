@@ -693,6 +693,28 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
   },
 
   {
+    name: 'preflight_scl',
+    description: 'Run static checks on an SCL file before import. Detects non-ASCII characters and reserved-keyword identifier collisions.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        scl_path: { type: 'string', description: 'Absolute path to the .scl file to validate.' },
+      },
+      required: ['scl_path'],
+    },
+    handler: async ({ scl_path }) => {
+      try {
+        const result = await runPs(join(SCRIPTS, 'preflight-scl.ps1'), ['-SclPath', scl_path]);
+        return JSON.stringify(result, null, 2);
+      } catch (err) {
+        const m = err.message.match(/\{[\s\S]*\}/);
+        if (m) return m[0];
+        throw err;
+      }
+    },
+  },
+
+  {
     name: 'create_group',
     description: `Create a group (folder) inside the Program Blocks tree of the open TIA Portal project.
 Use "/" to create nested groups in one call, e.g. "bdtronic B1000" or "Kistler NC/Helpers".
