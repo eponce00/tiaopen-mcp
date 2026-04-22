@@ -17,6 +17,11 @@ const schemas = {
       'Optional: full path to the .ap20 project file. If omitted, attaches to the already-open TIA project.'),
   },
   list_data_types: {},
+  list_groups: {},
+  ensure_library_layout: {
+    manifest_path: z.string().describe('Absolute path to layout manifest JSON file.'),
+    dry_run: z.boolean().optional().default(true).describe('When true, report planned actions without applying changes.'),
+  },
   get_block_xml: {
     block_name: z.string().describe('Name of the block to export, e.g. "Main" or "FB_Valve".'),
   },

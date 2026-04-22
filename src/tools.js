@@ -531,6 +531,55 @@ export const TOOLS = [
   },
 
   {
+    name: 'list_groups',
+    description: 'List both group trees in the open TIA Portal project: Program Blocks groups and PLC data types groups.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+      const result = await runPs(join(SCRIPTS, 'get-groups.ps1'));
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
+    name: 'ensure_library_layout',
+    description: `Apply a manifest-driven library layout for Program Blocks and PLC data types.
+
+Manifest JSON path is required and uses this shape:
+{
+  "program_blocks": [
+    { "block_name": "FB_KistlerNC", "group_path": "Kistler NC" }
+  ],
+  "plc_data_types": [
+    { "type_name": "UDT_KistlerNC_Cmd", "group_path": "Kistler NC" }
+  ]
+}
+
+Use dry_run=true first to preview planned moves without changing the project.
+Then run with dry_run=false to apply changes.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        manifest_path: {
+          type: 'string',
+          description: 'Absolute path to layout manifest JSON file.',
+        },
+        dry_run: {
+          type: 'boolean',
+          description: 'When true, only reports planned actions. Default true.',
+          default: true,
+        },
+      },
+      required: ['manifest_path'],
+    },
+    handler: async ({ manifest_path, dry_run = true }) => {
+      const args = ['-ManifestPath', manifest_path];
+      if (dry_run) args.push('-DryRun');
+      const result = await runPs(join(SCRIPTS, 'ensure-library-layout.ps1'), args);
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
     name: 'get_block_xml',
     description: 'Export a PLC block as raw TIA Portal XML. Use this to read the current logic of any block before editing.',
     inputSchema: {
