@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Template: lad/calculate.xml
+  Purpose : CALCULATE box — arbitrary formula using IN1..INn inputs and one output.
+            Covers Add, Sub, Mul, Div, Mod, Abs, Neg in one instruction.
+            Card = number of inputs (2–32). Formula uses standard IEC arithmetic.
+  Status  : VERIFIED — Import + compile → Success (TIA Portal V20 Update 4)
+
+  TOKENS:
+    {{BLOCK_NAME}}        - e.g. "FC_Calc"
+    {{BLOCK_NUMBER}}      - e.g. "231"
+    {{BLOCK_TYPE}}        - SW.Blocks.FC | SW.Blocks.FB | SW.Blocks.OB
+    {{NETWORK_TITLE}}     - Free text title
+    {{INPUT1_AREA}}       - Area for IN1 (Memory / Input)
+    {{INPUT1_BITOFFSET}}  - Bit offset for IN1
+    {{INPUT2_AREA}}       - Area for IN2
+    {{INPUT2_BITOFFSET}}  - Bit offset for IN2
+    {{OUTPUT_AREA}}       - Area for OUT
+    {{OUTPUT_BITOFFSET}}  - Bit offset for OUT
+    {{CALC_EQUATION}}     - Formula string, e.g. "IN1 + IN2" or "ABS(IN1) * IN2"
+    {{DATA_TYPE}}         - Int | DInt | Real | LReal etc. (SrcType and address types)
+
+  Note: This template hard-codes Card=2 (two inputs IN1, IN2).
+        For more inputs add additional Access elements and in1..inN wires, and bump Card value.
+
+  Formula syntax (from TIA Portal):
+    Arithmetic: + - * /  Modulo: MOD  Functions: ABS() NEG() SQR() SQRT() SIN() etc.
+    Inputs referenced as IN1 IN2 ... INn (case-insensitive in TIA, but uppercase shown here)
+
+  Example:
+    {{CALC_EQUATION}} = "ABS(IN1) + IN2"
+    {{DATA_TYPE}}     = "Int"
+-->
+<Document>
+  <Engineering version="V20" />
+  <{{BLOCK_TYPE}} ID="0">
+    <AttributeList>
+      <AutoNumber>false</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Temp" />
+  <Section Name="Constant" />
+</Sections></Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>{{BLOCK_NAME}}</Name>
+      <Namespace />
+      <Number>{{BLOCK_NUMBER}}</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SetENOAutomatically>false</SetENOAutomatically>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="Address" UId="21">
+      <Address Area="{{INPUT1_AREA}}" Type="{{DATA_TYPE}}" BitOffset="{{INPUT1_BITOFFSET}}" />
+    </Access>
+    <Access Scope="Address" UId="22">
+      <Address Area="{{INPUT2_AREA}}" Type="{{DATA_TYPE}}" BitOffset="{{INPUT2_BITOFFSET}}" />
+    </Access>
+    <Access Scope="Address" UId="23">
+      <Address Area="{{OUTPUT_AREA}}" Type="{{DATA_TYPE}}" BitOffset="{{OUTPUT_BITOFFSET}}" />
+    </Access>
+    <Part Name="Calc" UId="24" DisabledENO="true">
+      <Equation>{{CALC_EQUATION}}</Equation>
+      <TemplateValue Name="Card" Type="Cardinality">2</TemplateValue>
+      <TemplateValue Name="SrcType" Type="Type">{{DATA_TYPE}}</TemplateValue>
+    </Part>
+  </Parts>
+  <Wires>
+    <Wire UId="25">
+      <Powerrail />
+      <NameCon UId="24" Name="en" />
+    </Wire>
+    <Wire UId="26">
+      <IdentCon UId="21" />
+      <NameCon UId="24" Name="in1" />
+    </Wire>
+    <Wire UId="27">
+      <IdentCon UId="22" />
+      <NameCon UId="24" Name="in2" />
+    </Wire>
+    <Wire UId="28">
+      <NameCon UId="24" Name="out" />
+      <IdentCon UId="23" />
+    </Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>{{NETWORK_TITLE}}</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <MultilingualText ID="8" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="9" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </{{BLOCK_TYPE}}>
+</Document>

@@ -521,6 +521,16 @@ export const TOOLS = [
   },
 
   {
+    name: 'list_data_types',
+    description: 'List all PLC data types in the open TIA Portal project. Returns a JSON array with name, type, consistency, and group path.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+      const result = await runPs(join(SCRIPTS, 'get-data-types.ps1'));
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
     name: 'get_block_xml',
     description: 'Export a PLC block as raw TIA Portal XML. Use this to read the current logic of any block before editing.',
     inputSchema: {
@@ -630,6 +640,124 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
       const json = JSON.stringify(result, null, 2);
       const errors = result?.Errors ?? 0;
       return withHint(json, errors > 0 ? errorHint('SCL') : `\n---\n✅ SCL block imported and generated. Call \`compile\` to verify the full project builds clean.`);
+    },
+  },
+
+  {
+    name: 'create_group',
+    description: `Create a group (folder) inside the Program Blocks tree of the open TIA Portal project.
+Use "/" to create nested groups in one call, e.g. "bdtronic B1000" or "Kistler NC/Helpers".
+If the group (or any parent) already exists it is reused - safe to call repeatedly.
+This tool is only for Program Blocks. PLC data types use create_type_group.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        group_path: {
+          type: 'string',
+          description: 'Slash-separated group path, e.g. "Kistler NC" or "bdtronic B1000/UDTs".',
+        },
+      },
+      required: ['group_path'],
+    },
+    handler: async ({ group_path }) => {
+      const result = await runPs(join(SCRIPTS, 'manage-block-group.ps1'), [
+        '-Action', 'create_block_group',
+        '-GroupPath', group_path,
+      ]);
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
+    name: 'create_type_group',
+    description: `Create a group (folder) inside the PLC data types tree of the open TIA Portal project.
+Use "/" to create nested groups in one call, e.g. "Kistler NC" or "bdtronic B1000/Common".
+If the group (or any parent) already exists it is reused - safe to call repeatedly.
+Use this before calling move_type_to_group for UDTs and other PLC data types.`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        group_path: {
+          type: 'string',
+          description: 'Slash-separated PLC data types group path, e.g. "Kistler NC".',
+        },
+      },
+      required: ['group_path'],
+    },
+    handler: async ({ group_path }) => {
+      const result = await runPs(join(SCRIPTS, 'manage-block-group.ps1'), [
+        '-Action', 'create_type_group',
+        '-GroupPath', group_path,
+      ]);
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
+    name: 'move_block_to_group',
+    description: `Move an existing Program Blocks item into a group folder in the Program Blocks tree.
+The target group must exist - call create_group first if needed.
+Works with FB, FC, DB, and OB blocks.
+
+Example workflow to organise all Kistler blocks:
+  1. create_group("Kistler NC")
+  2. move_block_to_group(block_name:"FB_KistlerNC", group_path:"Kistler NC")
+  3. move_block_to_group(block_name:"FC_KistlerNC_StatusUnpack", group_path:"Kistler NC")`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        block_name: {
+          type: 'string',
+          description: 'Exact block name as it appears in TIA Portal, e.g. "FB_KistlerNC".',
+        },
+        group_path: {
+          type: 'string',
+          description: 'Target slash-separated group path, e.g. "Kistler NC" or "bdtronic B1000/UDTs".',
+        },
+      },
+      required: ['block_name', 'group_path'],
+    },
+    handler: async ({ block_name, group_path }) => {
+      const result = await runPs(join(SCRIPTS, 'manage-block-group.ps1'), [
+        '-Action', 'move_block',
+        '-BlockName', block_name,
+        '-GroupPath', group_path,
+      ]);
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
+    name: 'move_type_to_group',
+    description: `Move an existing PLC data type into a group folder in the PLC data types tree.
+The target group must exist - call create_type_group first if needed.
+Works with UDTs and other PLC data types that live under PLC data types.
+
+Example workflow to organise Kistler PLC data types:
+  1. create_type_group("Kistler NC")
+  2. move_type_to_group(block_name:"UDT_KistlerNC_Cmd", group_path:"Kistler NC")
+  3. move_type_to_group(block_name:"UDT_KistlerNC_Status", group_path:"Kistler NC")`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        block_name: {
+          type: 'string',
+          description: 'Exact PLC data type name as it appears in TIA Portal, e.g. "UDT_KistlerNC_Cmd".',
+        },
+        group_path: {
+          type: 'string',
+          description: 'Target slash-separated PLC data types group path, e.g. "Kistler NC".',
+        },
+      },
+      required: ['block_name', 'group_path'],
+    },
+    handler: async ({ block_name, group_path }) => {
+      const result = await runPs(join(SCRIPTS, 'manage-block-group.ps1'), [
+        '-Action', 'move_type',
+        '-BlockName', block_name,
+        '-GroupPath', group_path,
+      ]);
+      return JSON.stringify(result, null, 2);
     },
   },
 

@@ -4,9 +4,6 @@ node_modules/
 work/
 scl/
 tmp/
-data/
-scripts/
-templates/
 
 # IDE
 .vscode/

@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Template: lad/ton-timer.xml
+  Purpose : Single rung — Enable contact → TON timer → Done output coil.
+  Status  : PENDING VERIFICATION
+
+  TOKENS:
+    {{BLOCK_NAME}}        – e.g. "FC_TimerTest"
+    {{BLOCK_NUMBER}}      – e.g. "210"
+    {{BLOCK_TYPE}}        – SW.Blocks.OB | SW.Blocks.FC | SW.Blocks.FB
+    {{NETWORK_TITLE}}     – Free text title for the network rung
+    {{ENABLE_AREA}}       – Input | Output | Memory  (IN pin of TON)
+    {{ENABLE_BITOFFSET}}  – Bit offset for enable input, e.g. "0"
+    {{DONE_AREA}}         – Output | Memory  (Q pin of TON)
+    {{DONE_BITOFFSET}}    – Bit offset for done output, e.g. "0"
+    {{PRESET_TIME}}       – IEC Time constant string, e.g. "T#500MS" or "T#5S"
+    {{TIMER_DB}}          – Instance DB name for the TON, e.g. "IEC_Timer_0_DB"
+
+  Wire topology (from ground-truth TIA export):
+    Powerrail → NameCon(Contact, "in")
+    NameCon(Contact, "out") → NameCon(TON, "IN")
+    NameCon(TON, "Q") → NameCon(Coil, "in")
+    IdentCon(Access:enable) → NameCon(Contact, "operand")
+    IdentCon(Access:preset) → NameCon(TON, "PT")
+    IdentCon(Access:done) → NameCon(Coil, "operand")
+    NameCon(TON, "ET") → OpenCon  (unused elapsed time pin)
+
+  Notes:
+    - Part Name="TON" Version="1.0" (not TON_TIME)
+    - PT constant uses Scope="TypedConstant" with only <ConstantValue> (no <ConstantType>)
+    - TemplateValue Name="time_type" is required on the TON Part
+    - {{TIMER_DB}} must be a unique DB name that does not already exist in the project
+-->
+<Document>
+  <Engineering version="V20" />
+  <{{BLOCK_TYPE}} ID="0">
+    <AttributeList>
+      <AutoNumber>false</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Temp" />
+  <Section Name="Constant" />
+</Sections></Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>{{BLOCK_NAME}}</Name>
+      <Namespace />
+      <Number>{{BLOCK_NUMBER}}</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SetENOAutomatically>false</SetENOAutomatically>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="Address" UId="21">
+      <Address Area="{{ENABLE_AREA}}" Type="Bool" BitOffset="{{ENABLE_BITOFFSET}}" />
+    </Access>
+    <Access Scope="Address" UId="22">
+      <Address Area="{{DONE_AREA}}" Type="Bool" BitOffset="{{DONE_BITOFFSET}}" />
+    </Access>
+    <Access Scope="TypedConstant" UId="23">
+      <Constant>
+        <ConstantValue>{{PRESET_TIME}}</ConstantValue>
+      </Constant>
+    </Access>
+    <Part Name="Contact" UId="24" />
+    <Part Name="TON" Version="1.0" UId="25">
+      <Instance Scope="GlobalVariable" UId="26">
+        <Component Name="{{TIMER_DB}}" />
+      </Instance>
+      <TemplateValue Name="time_type" Type="Type">Time</TemplateValue>
+    </Part>
+    <Part Name="Coil" UId="27" />
+  </Parts>
+  <Wires>
+    <Wire UId="30">
+      <Powerrail />
+      <NameCon UId="24" Name="in" />
+    </Wire>
+    <Wire UId="31">
+      <NameCon UId="24" Name="out" />
+      <NameCon UId="25" Name="IN" />
+    </Wire>
+    <Wire UId="32">
+      <NameCon UId="25" Name="Q" />
+      <NameCon UId="27" Name="in" />
+    </Wire>
+    <Wire UId="33">
+      <IdentCon UId="21" />
+      <NameCon UId="24" Name="operand" />
+    </Wire>
+    <Wire UId="34">
+      <IdentCon UId="23" />
+      <NameCon UId="25" Name="PT" />
+    </Wire>
+    <Wire UId="35">
+      <IdentCon UId="22" />
+      <NameCon UId="27" Name="operand" />
+    </Wire>
+    <Wire UId="36">
+      <NameCon UId="25" Name="ET" />
+      <OpenCon UId="37" />
+    </Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>{{NETWORK_TITLE}}</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </{{BLOCK_TYPE}}>
+</Document>
+
+  Template: lad/ton-timer.xml
+  Purpose : Single rung — Enable contact → TON timer → Done output coil.
+  Status  : PENDING VERIFICATION
+
+  TOKENS:
+    {{BLOCK_NAME}}        – e.g. "FC_TimerTest"
+    {{BLOCK_NUMBER}}      – e.g. "210"
+    {{BLOCK_TYPE}}        – SW.Blocks.OB | SW.Blocks.FC | SW.Blocks.FB
+    {{NETWORK_TITLE}}     – Free text title for the network rung
+    {{ENABLE_AREA}}       – Input | Output | Memory  (IN pin of TON)
+    {{ENABLE_BITOFFSET}}  – Bit offset for enable input, e.g. "0"
+    {{DONE_AREA}}         – Output | Memory  (Q pin of TON)
+    {{DONE_BITOFFSET}}    – Bit offset for done output, e.g. "0"
+    {{PRESET_TIME}}       – Time value in milliseconds as integer, e.g. "5000" (= T#5S)
+
+  Wire topology:
+    Powerrail → NameCon(Contact, "in")
+    NameCon(Contact, "out") → NameCon(TON_TIME, "IN")
+    NameCon(TON_TIME, "Q") → NameCon(Coil, "in")
+    IdentCon(Access:enable) → NameCon(Contact, "operand")
+    IdentCon(Access:preset) → NameCon(TON_TIME, "PT")
+    IdentCon(Access:done) → NameCon(Coil, "operand")
+
+  NOTE: TON_TIME is the S7-1200/1500 IEC timer instruction name.
+        Instance DB is auto-created by TIA when block is imported.
+-->
+<Document>
+  <Engineering version="V20" />
+  <{{BLOCK_TYPE}} ID="0">
+    <AttributeList>
+      <AutoNumber>false</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Temp" />
+  <Section Name="Constant" />
+</Sections></Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>{{BLOCK_NAME}}</Name>
+      <Namespace />
+      <Number>{{BLOCK_NUMBER}}</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SetENOAutomatically>false</SetENOAutomatically>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="Address" UId="21">
+      <Address Area="{{ENABLE_AREA}}" Type="Bool" BitOffset="{{ENABLE_BITOFFSET}}" />
+    </Access>
+    <Access Scope="Address" UId="22">
+      <Address Area="{{DONE_AREA}}" Type="Bool" BitOffset="{{DONE_BITOFFSET}}" />
+    </Access>
+    <Access Scope="LiteralConstant" UId="23">
+      <Constant>
+        <ConstantType>Time</ConstantType>
+        <ConstantValue>{{PRESET_TIME}}</ConstantValue>
+      </Constant>
+    </Access>
+    <Part Name="Contact" UId="24" />
+    <Part Name="TON_TIME" UId="25">
+      <Instance Scope="GlobalVariable" UId="26">
+        <Component Name="Timer1" />
+      </Instance>
+    </Part>
+    <Part Name="Coil" UId="27" />
+  </Parts>
+  <Wires>
+    <Wire UId="30">
+      <Powerrail />
+      <NameCon UId="24" Name="in" />
+    </Wire>
+    <Wire UId="31">
+      <NameCon UId="24" Name="out" />
+      <NameCon UId="25" Name="IN" />
+    </Wire>
+    <Wire UId="32">
+      <NameCon UId="25" Name="Q" />
+      <NameCon UId="27" Name="in" />
+    </Wire>
+    <Wire UId="33">
+      <IdentCon UId="21" />
+      <NameCon UId="24" Name="operand" />
+    </Wire>
+    <Wire UId="34">
+      <IdentCon UId="23" />
+      <NameCon UId="25" Name="PT" />
+    </Wire>
+    <Wire UId="35">
+      <IdentCon UId="22" />
+      <NameCon UId="27" Name="operand" />
+    </Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>{{NETWORK_TITLE}}</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+    </ObjectList>
+  </{{BLOCK_TYPE}}>
+</Document>

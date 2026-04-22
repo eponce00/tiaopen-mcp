@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Template: lad/fc-call.xml
+  Purpose : Single LAD rung - Contact enables an FC call, ENO drives an output coil.
+  Status  : PENDING VERIFICATION
+
+  TOKENS:
+    {{BLOCK_NAME}}       - e.g. "FC_Main"
+    {{BLOCK_NUMBER}}     - e.g. "223"
+    {{BLOCK_TYPE}}       - SW.Blocks.OB | SW.Blocks.FC | SW.Blocks.FB
+    {{NETWORK_TITLE}}    - Free text title
+    {{ENABLE_AREA}}      - Area for enable contact (Input / Memory)
+    {{ENABLE_BITOFFSET}} - Bit offset for enable contact
+    {{DONE_AREA}}        - Area for ENO output coil (Output / Memory)
+    {{DONE_BITOFFSET}}   - Bit offset for ENO output coil
+    {{CALLEE_FC}}        - Name of FC to call, e.g. "FC_SafetyOff"
+
+  Example call:
+    .\scripts\new-block.ps1 -Template templates\lad\fc-call.xml `
+      -BlockName FC_Main -BlockNumber 223 -BlockType SW.Blocks.FC `
+      -EnableArea Input -EnableBitOffset 0 -DoneArea Output -DoneBitOffset 0 `
+      -CalleeFc FC_SafetyOff
+-->
+<Document>
+  <Engineering version="V20" />
+  <{{BLOCK_TYPE}} ID="0">
+    <AttributeList>
+      <AutoNumber>false</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Input" />
+  <Section Name="Output" />
+  <Section Name="InOut" />
+  <Section Name="Temp" />
+  <Section Name="Constant" />
+  <Section Name="Return">
+    <Member Name="Ret_Val" Datatype="Void" Accessibility="Public" />
+  </Section>
+</Sections></Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>{{BLOCK_NAME}}</Name>
+      <Namespace />
+      <Number>{{BLOCK_NUMBER}}</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SetENOAutomatically>false</SetENOAutomatically>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="Address" UId="21">
+      <Address Area="{{ENABLE_AREA}}" Type="Bool" BitOffset="{{ENABLE_BITOFFSET}}" />
+    </Access>
+    <Access Scope="Address" UId="22">
+      <Address Area="{{DONE_AREA}}" Type="Bool" BitOffset="{{DONE_BITOFFSET}}" />
+    </Access>
+    <Part Name="Contact" UId="23" />
+    <Call UId="24">
+      <CallInfo Name="{{CALLEE_FC}}" BlockType="FC" />
+    </Call>
+    <Part Name="Coil" UId="25" />
+  </Parts>
+  <Wires>
+    <Wire UId="30">
+      <Powerrail />
+      <NameCon UId="23" Name="in" />
+    </Wire>
+    <Wire UId="31">
+      <IdentCon UId="21" />
+      <NameCon UId="23" Name="operand" />
+    </Wire>
+    <Wire UId="32">
+      <NameCon UId="23" Name="out" />
+      <NameCon UId="24" Name="en" />
+    </Wire>
+    <Wire UId="33">
+      <NameCon UId="24" Name="eno" />
+      <NameCon UId="25" Name="in" />
+    </Wire>
+    <Wire UId="34">
+      <IdentCon UId="22" />
+      <NameCon UId="25" Name="operand" />
+    </Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>{{NETWORK_TITLE}}</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <MultilingualText ID="8" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="9" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </{{BLOCK_TYPE}}>
+</Document>

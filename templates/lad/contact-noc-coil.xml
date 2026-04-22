@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Template: lad/contact-noc-coil.xml
+  Purpose : Single rung — one Normally Closed contact (XIO) driving one output Coil.
+  Verified: Import + compile → Success, 0 errors (TIA Portal V20 Update 4)
+  Fix    : Part Name is still "Contact" — add <Negated Name="operand"/> child to negate it.
+
+  TOKENS (replace before import):
+    {{BLOCK_NAME}}        – e.g. "FC_SafetyOff"
+    {{BLOCK_NUMBER}}      – e.g. "201"
+    {{BLOCK_TYPE}}        – SW.Blocks.OB | SW.Blocks.FC | SW.Blocks.FB
+    {{NETWORK_TITLE}}     – free text
+    {{INPUT_AREA}}        – Input | Output | Memory
+    {{INPUT_BITOFFSET}}   – e.g. "0" for %I0.0
+    {{OUTPUT_AREA}}       – Input | Output | Memory
+    {{OUTPUT_BITOFFSET}}  – e.g. "0" for %Q0.0
+
+  Difference from contact-coil.xml:
+    Part Name="ContactNormallyClosed" instead of "Contact"
+    Wire names remain identical ("in", "out", "operand")
+-->
+<Document>
+  <Engineering version="V20" />
+  <{{BLOCK_TYPE}} ID="0">
+    <AttributeList>
+      <AutoNumber>false</AutoNumber>
+      <HeaderAuthor />
+      <HeaderFamily />
+      <HeaderName />
+      <HeaderVersion>0.1</HeaderVersion>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Temp" />
+  <Section Name="Constant" />
+</Sections></Interface>
+      <IsIECCheckEnabled>false</IsIECCheckEnabled>
+      <MemoryLayout>Optimized</MemoryLayout>
+      <Name>{{BLOCK_NAME}}</Name>
+      <Namespace />
+      <Number>{{BLOCK_NUMBER}}</Number>
+      <ProgrammingLanguage>LAD</ProgrammingLanguage>
+      <SetENOAutomatically>false</SetENOAutomatically>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <SW.Blocks.CompileUnit ID="3" CompositionName="CompileUnits">
+        <AttributeList>
+          <NetworkSource><FlgNet xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5">
+  <Parts>
+    <Access Scope="Address" UId="21">
+      <Address Area="{{INPUT_AREA}}" Type="Bool" BitOffset="{{INPUT_BITOFFSET}}" />
+    </Access>
+    <Access Scope="Address" UId="22">
+      <Address Area="{{OUTPUT_AREA}}" Type="Bool" BitOffset="{{OUTPUT_BITOFFSET}}" />
+    </Access>
+    <Part Name="Contact" UId="23">
+      <Negated Name="operand" />
+    </Part>
+    <Part Name="Coil" UId="24" />
+  </Parts>
+  <Wires>
+    <Wire UId="25">
+      <Powerrail />
+      <NameCon UId="23" Name="in" />
+    </Wire>
+    <Wire UId="26">
+      <NameCon UId="23" Name="out" />
+      <NameCon UId="24" Name="in" />
+    </Wire>
+    <Wire UId="27">
+      <IdentCon UId="21" />
+      <NameCon UId="23" Name="operand" />
+    </Wire>
+    <Wire UId="28">
+      <IdentCon UId="22" />
+      <NameCon UId="24" Name="operand" />
+    </Wire>
+  </Wires>
+</FlgNet></NetworkSource>
+          <ProgrammingLanguage>LAD</ProgrammingLanguage>
+        </AttributeList>
+        <ObjectList>
+          <MultilingualText ID="4" CompositionName="Comment">
+            <ObjectList>
+              <MultilingualTextItem ID="5" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text />
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+          <MultilingualText ID="6" CompositionName="Title">
+            <ObjectList>
+              <MultilingualTextItem ID="7" CompositionName="Items">
+                <AttributeList>
+                  <Culture>en-US</Culture>
+                  <Text>{{NETWORK_TITLE}}</Text>
+                </AttributeList>
+              </MultilingualTextItem>
+            </ObjectList>
+          </MultilingualText>
+        </ObjectList>
+      </SW.Blocks.CompileUnit>
+      <MultilingualText ID="8" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="9" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text>{{BLOCK_NAME}}</Text>
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </{{BLOCK_TYPE}}>
+</Document>

@@ -16,6 +16,7 @@ const schemas = {
     project_path: z.string().optional().describe(
       'Optional: full path to the .ap20 project file. If omitted, attaches to the already-open TIA project.'),
   },
+  list_data_types: {},
   get_block_xml: {
     block_name: z.string().describe('Name of the block to export, e.g. "Main" or "FB_Valve".'),
   },
@@ -81,6 +82,20 @@ const schemas = {
       static: z.array(z.record(z.unknown())).optional(),
       temp:   z.array(z.record(z.unknown())).optional(),
     }).optional().describe('Block interface members.'),
+  },
+  create_group: {
+    group_path: z.string().describe('Slash-separated Program Blocks group path, e.g. "Kistler NC" or "bdtronic B1000/Helpers".'),
+  },
+  create_type_group: {
+    group_path: z.string().describe('Slash-separated PLC data types group path, e.g. "Kistler NC".'),
+  },
+  move_block_to_group: {
+    block_name: z.string().describe('Exact block name, e.g. "FB_KistlerNC".'),
+    group_path: z.string().describe('Target slash-separated group path, e.g. "Kistler NC".'),
+  },
+  move_type_to_group: {
+    block_name: z.string().describe('Exact PLC data type name, e.g. "UDT_KistlerNC_Cmd".'),
+    group_path: z.string().describe('Target PLC data types group path, e.g. "Kistler NC".'),
   },
 };
 
