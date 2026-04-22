@@ -1,0 +1,14 @@
+{
+  "name": "tiaopen-mcp",
+  "version": "0.1.0",
+  "description": "MCP server — TIA Portal Openness API copilot tools",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "zod": "^3.25.76"
+  }
+}

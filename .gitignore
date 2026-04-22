@@ -1,0 +1,7 @@
+node_modules/
+
+# work/ is the MCP output scratch area - not project-specific
+work/
+
+*.log
+empty.json
