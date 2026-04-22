@@ -1,7 +1,15 @@
 node_modules/
 
-# work/ is the MCP output scratch area - not project-specific
+# MCP output / scratch areas - project-specific, not tracked
 work/
+scl/
+tmp/
+data/
+scripts/
+templates/
+
+# IDE
+.vscode/
 
 *.log
 empty.json
