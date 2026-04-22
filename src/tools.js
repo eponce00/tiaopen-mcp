@@ -71,6 +71,10 @@ const HINT_COMPILE = `
 ---
 ⚡ NEXT STEP: Call \`compile\` now to verify the whole project builds clean after this change.`;
 
+const HINT_SAVE_PROJECT = `
+---
+💾 If this result looks good and worth keeping, call \`save_project\` now to persist the TIA project to disk.`;
+
 const HINT_SCL_XML = `
 ---
 📖 SCL StructuredText XML rules (TIA V20):
@@ -121,6 +125,19 @@ const HINT_LAD_XML = `
 /** Append a hint string to a JSON result string. */
 function withHint(jsonStr, hint) {
   return jsonStr + hint;
+}
+
+function isSuccessfulMutationResult(result) {
+  if (!result || typeof result !== 'object') return false;
+  const state = String(result.State ?? '').toLowerCase();
+  if (state === 'success' || state === 'warning' || state === 'ok') return true;
+  if (result.Deleted === true || result.Saved === true) return true;
+  if (result.Imported === true && (result.Errors ?? 0) === 0) return true;
+  return false;
+}
+
+function withSaveProjectNudgeIfSuccess(result, text) {
+  return isSuccessfulMutationResult(result) ? withHint(text, HINT_SAVE_PROJECT) : text;
 }
 
 /** Return the right error hint based on programming language. */
@@ -642,7 +659,9 @@ Then run with dry_run=false to apply changes.`,
       const args = ['-ManifestPath', manifest_path];
       if (dry_run) args.push('-DryRun');
       const result = await runPs(join(SCRIPTS, 'ensure-library-layout.ps1'), args);
-      return JSON.stringify(result, null, 2);
+      const json = JSON.stringify(result, null, 2);
+      if (dry_run) return json;
+      return withSaveProjectNudgeIfSuccess(result, json);
     },
   },
 
@@ -690,7 +709,7 @@ Then run with dry_run=false to apply changes.`,
       }
       const json = JSON.stringify(result, null, 2);
       const errors = result?.Errors ?? 0;
-      return withHint(json, errors > 0 ? errorHint(lang) : `\n---\n✅ Block imported${result?.Compiled ? ' and compiled' : ''}. Call \`compile\` to verify full project consistency.`);
+      return withHint(json, errors > 0 ? errorHint(lang) : `\n---\n✅ Block imported${result?.Compiled ? ' and compiled' : ''}. Call \`compile\` to verify full project consistency.${HINT_SAVE_PROJECT}`);
     },
   },
 
@@ -814,7 +833,7 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
       };
       const json = JSON.stringify(out, null, 2);
       const errors = out?.Errors ?? 0;
-      return withHint(json, errors > 0 ? errorHint('SCL') : `\n---\n✅ SCL block imported and generated. Call \`compile\` to verify the full project builds clean.`);
+      return withHint(json, errors > 0 ? errorHint('SCL') : `\n---\n✅ SCL block imported and generated. Call \`compile\` to verify the full project builds clean.${HINT_SAVE_PROJECT}`);
     },
   },
 
@@ -861,7 +880,7 @@ This tool is only for Program Blocks. PLC data types use create_type_group.`,
         '-Action', 'create_block_group',
         '-GroupPath', group_path,
       ]);
-      return JSON.stringify(result, null, 2);
+      return withSaveProjectNudgeIfSuccess(result, JSON.stringify(result, null, 2));
     },
   },
 
@@ -886,7 +905,7 @@ Use this before calling move_type_to_group for UDTs and other PLC data types.`,
         '-Action', 'create_type_group',
         '-GroupPath', group_path,
       ]);
-      return JSON.stringify(result, null, 2);
+      return withSaveProjectNudgeIfSuccess(result, JSON.stringify(result, null, 2));
     },
   },
 
@@ -920,7 +939,7 @@ Example workflow to organise all Kistler blocks:
         '-BlockName', block_name,
         '-GroupPath', group_path,
       ]);
-      return JSON.stringify(result, null, 2);
+      return withSaveProjectNudgeIfSuccess(result, JSON.stringify(result, null, 2));
     },
   },
 
@@ -954,7 +973,7 @@ Example workflow to organise Kistler PLC data types:
         '-BlockName', block_name,
         '-GroupPath', group_path,
       ]);
-      return JSON.stringify(result, null, 2);
+      return withSaveProjectNudgeIfSuccess(result, JSON.stringify(result, null, 2));
     },
   },
 
@@ -968,7 +987,7 @@ Example workflow to organise Kistler PLC data types:
       const errors = result?.Errors ?? 0;
       const hint = errors > 0
         ? HINT_SCL_XML + HINT_LAD_XML
-        : `\n---\n✅ Project compiles clean — no errors, no warnings.`;
+        : `\n---\n✅ Project compiles clean — no errors, no warnings.${HINT_SAVE_PROJECT}`;
       return withHint(json, hint);
     },
   },
@@ -1007,7 +1026,8 @@ Example workflow to organise Kistler PLC data types:
       if (address) args.push('-Address', address);
       if (table) args.push('-TableName', table);
       const result = await runPs(join(SCRIPTS, 'add-tag.ps1'), args);
-      return withHint(JSON.stringify(result, null, 2), HINT_COMPILE);
+      const text = withHint(JSON.stringify(result, null, 2), HINT_COMPILE);
+      return withSaveProjectNudgeIfSuccess(result, text);
     },
   },
 
@@ -1113,7 +1133,7 @@ PARAMS — pass as the \`params\` object (keys = PowerShell parameter names):
       }
       const json = JSON.stringify(result, null, 2);
       const errors = result?.Errors ?? 0;
-      return withHint(json, errors > 0 ? errorHint(params?.ProgrammingLanguage ?? 'unknown') : `\n---\n✅ Block created. Call \`compile\` to verify the full project builds clean.`);
+      return withHint(json, errors > 0 ? errorHint(params?.ProgrammingLanguage ?? 'unknown') : `\n---\n✅ Block created. Call \`compile\` to verify the full project builds clean.${HINT_SAVE_PROJECT}`);
     },
   },
 
@@ -1237,7 +1257,7 @@ OR parallel block:
       }
       const json = JSON.stringify(result, null, 2);
       const errors = result?.Errors ?? 0;
-      return withHint(json, errors > 0 ? HINT_LAD_XML : `\n---\n✅ LAD block "${name}" imported${result?.Compiled ? ' and compiled' : ''}. Call \`compile\` to verify full project consistency.`);
+      return withHint(json, errors > 0 ? HINT_LAD_XML : `\n---\n✅ LAD block "${name}" imported${result?.Compiled ? ' and compiled' : ''}. Call \`compile\` to verify full project consistency.${HINT_SAVE_PROJECT}`);
     },
   },
 
@@ -1253,7 +1273,7 @@ OR parallel block:
     },
     handler: async ({ name }) => {
       const result = await runPs(join(SCRIPTS, 'delete-item.ps1'), ['-BlockName', name]);
-      return JSON.stringify(result, null, 2);
+      return withSaveProjectNudgeIfSuccess(result, JSON.stringify(result, null, 2));
     },
   },
 
@@ -1333,7 +1353,8 @@ OR parallel block:
     },
     handler: async ({ table_name }) => {
       const result = await runPs(join(SCRIPTS, 'new-tag-table.ps1'), ['-TableName', table_name]);
-      return withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Tag table created. Use \`add_tag\` to populate it, then \`compile\` to verify consistency.`);
+      const text = withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Tag table created. Use \`add_tag\` to populate it, then \`compile\` to verify consistency.`);
+      return withSaveProjectNudgeIfSuccess(result, text);
     },
   },
 
@@ -1357,7 +1378,8 @@ OR parallel block:
       if (db_number && db_number > 0) args.push('-DBNumber', String(db_number));
       else args.push('-AutoNumber');
       const result = await runPs(join(SCRIPTS, 'new-global-db.ps1'), args);
-      return withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Global DB created. Call \`compile\` to check project consistency.`);
+      const text = withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Global DB created. Call \`compile\` to check project consistency.`);
+      return withSaveProjectNudgeIfSuccess(result, text);
     },
   },
 
@@ -1382,7 +1404,8 @@ OR parallel block:
       if (db_number && db_number > 0) args.push('-DBNumber', String(db_number));
       else args.push('-AutoNumber');
       const result = await runPs(join(SCRIPTS, 'new-instance-db.ps1'), args);
-      return withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Instance DB created. Call \`compile\` to verify the FB instance is consistent.`);
+      const text = withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Instance DB created. Call \`compile\` to verify the FB instance is consistent.`);
+      return withSaveProjectNudgeIfSuccess(result, text);
     },
   },
 
