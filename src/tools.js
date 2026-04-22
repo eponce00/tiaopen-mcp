@@ -578,6 +578,26 @@ export const TOOLS = [
   },
 
   {
+    name: 'save_project',
+    description: 'Save the currently open TIA Portal project to disk. Useful before risky edits, imports, moves, or compile/deploy steps.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_match: {
+          type: 'string',
+          description: 'Optional project title/name match used to select the target TIA UI process. Default "Testing_Playground".',
+        },
+      },
+    },
+    handler: async ({ project_match }) => {
+      const args = [];
+      if (project_match) args.push('-ProjectMatch', project_match);
+      const result = await runPs(join(SCRIPTS, 'save-project.ps1'), args);
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
     name: 'list_groups',
     description: 'List both group trees in the open TIA Portal project: Program Blocks groups and PLC data types groups.',
     inputSchema: { type: 'object', properties: {} },

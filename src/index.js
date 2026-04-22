@@ -21,6 +21,9 @@ const schemas = {
   tia_status: {
     project_match: z.string().optional().describe('Optional project title/name match to highlight candidate TIA UI processes.'),
   },
+  save_project: {
+    project_match: z.string().optional().describe('Optional project title/name match used to select the target TIA UI process.'),
+  },
   list_groups: {},
   ensure_library_layout: {
     manifest_path: z.string().describe('Absolute path to layout manifest JSON file.'),

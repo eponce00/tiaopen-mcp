@@ -45,6 +45,7 @@ Restart the MCP server after any change to `src/`.
 | `get_template_xml` | Inspect a raw template |
 | `create_tag_table` | Create a PLC tag table |
 | `add_tag` | Add a tag to a tag table |
+| `save_project` | Save the currently open TIA Portal project to disk |
 | `list_tags` | List tags in a tag table |
 
 ## Notes
