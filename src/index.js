@@ -17,6 +17,10 @@ const schemas = {
       'Optional: full path to the .ap20 project file. If omitted, attaches to the already-open TIA project.'),
   },
   list_data_types: {},
+  list_tag_tables: {},
+  tia_status: {
+    project_match: z.string().optional().describe('Optional project title/name match to highlight candidate TIA UI processes.'),
+  },
   list_groups: {},
   ensure_library_layout: {
     manifest_path: z.string().describe('Absolute path to layout manifest JSON file.'),
@@ -30,6 +34,8 @@ const schemas = {
   },
   write_scl_block: {
     scl_path: z.string().describe('Absolute path to the .scl file to import.'),
+    program_group_path: z.string().optional().describe('Optional Program Blocks group path for FC/FB/DB/OB placement after import.'),
+    type_group_path: z.string().optional().describe('Optional PLC data types group path for TYPE/UDT placement after import.'),
   },
   preflight_scl: {
     scl_path: z.string().describe('Absolute path to the .scl file to validate.'),

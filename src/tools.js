@@ -142,6 +142,23 @@ function tryParseCompileError(err) {
   return null;
 }
 
+function parseSclDeclaration(sclPath) {
+  try {
+    const text = readFileSync(sclPath, 'utf8');
+    const patterns = [
+      { kind: 'TYPE', re: /\bTYPE\s+"([^"]+)"/i },
+      { kind: 'FUNCTION_BLOCK', re: /\bFUNCTION_BLOCK\s+"([^"]+)"/i },
+      { kind: 'FUNCTION', re: /\bFUNCTION\s+"([^"]+)"/i },
+      { kind: 'ORGANIZATION_BLOCK', re: /\bORGANIZATION_BLOCK\s+"([^"]+)"/i },
+    ];
+    for (const p of patterns) {
+      const m = text.match(p.re);
+      if (m) return { kind: p.kind, name: m[1] };
+    }
+  } catch {}
+  return null;
+}
+
 // ─── LAD XML generator ───────────────────────────────────────────────────────
 
 /**
@@ -531,6 +548,36 @@ export const TOOLS = [
   },
 
   {
+    name: 'list_tag_tables',
+    description: 'List PLC tag tables and tag-table groups in the open TIA Portal project, including the default tag table.',
+    inputSchema: { type: 'object', properties: {} },
+    handler: async () => {
+      const result = await runPs(join(SCRIPTS, 'get-tag-tables.ps1'));
+      return JSON.stringify(Array.isArray(result) ? result : [result], null, 2);
+    },
+  },
+
+  {
+    name: 'tia_status',
+    description: 'Report TIA Portal process/session health: running processes, attachability, window title, and open projects.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project_match: {
+          type: 'string',
+          description: 'Optional project title/name match used to mark candidate processes. Default "Testing_Playground".',
+        },
+      },
+    },
+    handler: async ({ project_match }) => {
+      const args = [];
+      if (project_match) args.push('-ProjectMatch', project_match);
+      const result = await runPs(join(SCRIPTS, 'tia-status.ps1'), args);
+      return JSON.stringify(result, null, 2);
+    },
+  },
+
+  {
     name: 'list_groups',
     description: 'List both group trees in the open TIA Portal project: Program Blocks groups and PLC data types groups.',
     inputSchema: { type: 'object', properties: {} },
@@ -674,10 +721,18 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
       type: 'object',
       properties: {
         scl_path: { type: 'string', description: 'Absolute path to the .scl file to import.' },
+        program_group_path: {
+          type: 'string',
+          description: 'Optional Program Blocks group path for FC/FB/DB/OB after import, e.g. "Kistler NC".',
+        },
+        type_group_path: {
+          type: 'string',
+          description: 'Optional PLC data types group path for TYPE/UDT after import, e.g. "Kistler NC".',
+        },
       },
       required: ['scl_path'],
     },
-    handler: async ({ scl_path }) => {
+    handler: async ({ scl_path, program_group_path, type_group_path }) => {
       let result;
       try {
         result = await runPs(join(SCRIPTS, 'import-scl.ps1'), ['-SclPath', scl_path]);
@@ -686,8 +741,28 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
         if (r) return withHint(JSON.stringify(r, null, 2), errorHint('SCL'));
         throw err;
       }
-      const json = JSON.stringify(result, null, 2);
-      const errors = result?.Errors ?? 0;
+
+      let placement = null;
+      const decl = parseSclDeclaration(scl_path);
+      if (decl) {
+        if (decl.kind === 'TYPE' && type_group_path) {
+          placement = await runPs(join(SCRIPTS, 'manage-block-group.ps1'), [
+            '-Action', 'move_type',
+            '-BlockName', decl.name,
+            '-GroupPath', type_group_path,
+          ]);
+        } else if (decl.kind !== 'TYPE' && program_group_path) {
+          placement = await runPs(join(SCRIPTS, 'manage-block-group.ps1'), [
+            '-Action', 'move_block',
+            '-BlockName', decl.name,
+            '-GroupPath', program_group_path,
+          ]);
+        }
+      }
+
+      const out = placement ? { ...result, Placement: placement } : result;
+      const json = JSON.stringify(out, null, 2);
+      const errors = out?.Errors ?? 0;
       return withHint(json, errors > 0 ? errorHint('SCL') : `\n---\n✅ SCL block imported and generated. Call \`compile\` to verify the full project builds clean.`);
     },
   },
