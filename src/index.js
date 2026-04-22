@@ -34,6 +34,7 @@ const schemas = {
   },
   write_scl_block: {
     scl_path: z.string().describe('Absolute path to the .scl file to import.'),
+    strict_preflight: z.boolean().optional().default(true).describe('Abort import when preflight_scl finds errors (default true).'),
     program_group_path: z.string().optional().describe('Optional Program Blocks group path for FC/FB/DB/OB placement after import.'),
     type_group_path: z.string().optional().describe('Optional PLC data types group path for TYPE/UDT placement after import.'),
   },

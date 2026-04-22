@@ -721,6 +721,11 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
       type: 'object',
       properties: {
         scl_path: { type: 'string', description: 'Absolute path to the .scl file to import.' },
+        strict_preflight: {
+          type: 'boolean',
+          description: 'When true (default), abort import if preflight_scl reports errors. When false, include findings but continue import.',
+          default: true,
+        },
         program_group_path: {
           type: 'string',
           description: 'Optional Program Blocks group path for FC/FB/DB/OB after import, e.g. "Kistler NC".',
@@ -732,7 +737,28 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
       },
       required: ['scl_path'],
     },
-    handler: async ({ scl_path, program_group_path, type_group_path }) => {
+    handler: async ({ scl_path, strict_preflight = true, program_group_path, type_group_path }) => {
+      let preflight = null;
+      try {
+        preflight = await runPs(join(SCRIPTS, 'preflight-scl.ps1'), ['-SclPath', scl_path]);
+      } catch (err) {
+        const m = err.message.match(/\{[\s\S]*\}/);
+        if (m) {
+          try { preflight = JSON.parse(m[0]); } catch {}
+        }
+        if (!preflight) throw err;
+      }
+
+      if (strict_preflight && (preflight?.Errors ?? 0) > 0) {
+        return withHint(JSON.stringify({
+          State: 'Error',
+          Aborted: true,
+          Reason: 'preflight_failed',
+          StrictPreflight: true,
+          Preflight: preflight,
+        }, null, 2), errorHint('SCL'));
+      }
+
       let result;
       try {
         result = await runPs(join(SCRIPTS, 'import-scl.ps1'), ['-SclPath', scl_path]);
@@ -760,7 +786,12 @@ TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corru
         }
       }
 
-      const out = placement ? { ...result, Placement: placement } : result;
+      const out = {
+        ...result,
+        StrictPreflight: !!strict_preflight,
+        Preflight: preflight,
+        ...(placement ? { Placement: placement } : {}),
+      };
       const json = JSON.stringify(out, null, 2);
       const errors = out?.Errors ?? 0;
       return withHint(json, errors > 0 ? errorHint('SCL') : `\n---\n✅ SCL block imported and generated. Call \`compile\` to verify the full project builds clean.`);
