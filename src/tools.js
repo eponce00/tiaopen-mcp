@@ -601,7 +601,16 @@ Common collisions to watch for:
   TYPE, STRUCT, ARRAY, OF, AT  (type system)
   TRUE, FALSE, NULL       (literals)
   IN, OUT, INOUT — also avoid as field names (confusing and sometimes rejected)
-Safe renames: Continue→ContWait, Exit→ExitFlag, Type→MpType/Kind`,
+Safe renames: Continue->ContWait, Exit->ExitFlag, Type->MpType/Kind
+
+⚠️  ASCII-ONLY RULE — All SCL text (comments, strings, identifiers) must use plain ASCII characters only (code points 0x00-0x7F).
+Do NOT use Unicode characters such as:
+  — (em-dash U+2014)  → use plain hyphen -
+  – (en-dash U+2013)  → use plain hyphen -
+  → (right arrow U+2192)  → use ->
+  • (bullet U+2022)  → use *
+  Any other non-ASCII symbol  → use ASCII equivalent or remove
+TIA Portal Openness imports SCL as Windows-1252. Non-ASCII UTF-8 sequences corrupt silently, showing as â€" or â†' in comments inside TIA.`,
     inputSchema: {
       type: 'object',
       properties: {
