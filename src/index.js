@@ -46,13 +46,13 @@ const schemas = {
   },
   compile: {},
   list_tags: {},
-  add_tag: {
+  create_tag: {
     name: z.string().describe('Tag name.'),
     data_type: z.string().describe('TIA data type, e.g. "Bool", "Int", "Real".'),
     address: z.string().optional().describe('Absolute address, e.g. "%M0.0", "%MW10". Leave empty for unassigned.'),
     table: z.string().optional().describe('Name of the tag table. Defaults to the first table.'),
   },
-  new_block: {
+  create_block: {
     template: z.string().describe(
       'Template path as returned by list_templates, e.g. "lad/contact-coil" or "scl/fc-skeleton".'),
     params: z.record(z.string()).describe(
@@ -60,11 +60,13 @@ const schemas = {
   },
   list_templates: {},
   delete_item: {
-    name: z.string().describe('Name of the item to delete, e.g. "FC_Old", "UDT_MyType".'),
+    name: z.string().describe('Name of the item to delete, e.g. "FC_Old", "UDT_MyType", "myTag", "MyTable".'),
+    kind: z.enum(['Auto', 'Block', 'DataType', 'Tag', 'TagTable']).optional()
+      .describe('Optional. Restrict deletion to a specific kind. Defaults to "Auto" (tries Block → DataType → Tag → TagTable).'),
   },
   preview_block: {
     template: z.string().describe('Template path, e.g. "lad/contact-coil".'),
-    params: z.record(z.string()).describe('Same params as new_block. BlockName is required.'),
+    params: z.record(z.string()).describe('Same params as create_block. BlockName is required.'),
   },
   get_template_xml: {
     template: z.string().describe('Template path, e.g. "lad/contact-coil" or "scl/fc-skeleton".'),

@@ -61,19 +61,63 @@ try {
     $plc = Find-PlcSoftware -Project $project
     if (-not $plc) { Write-Error "PlcSoftware not found."; exit 1 }
 
-    $block = $plc.BlockGroup.Blocks.Find($BlockName)
+    function Find-Block {
+        param($Group, [string]$Name)
+        $b = $Group.Blocks.Find($Name)
+        if ($b) { return $b }
+        foreach ($sub in $Group.Groups) {
+            $b = Find-Block $sub $Name
+            if ($b) { return $b }
+        }
+        return $null
+    }
+
+    function Find-Type {
+        param($Group, [string]$Name)
+        $t = $Group.Types.Find($Name)
+        if ($t) { return $t }
+        foreach ($sub in $Group.Groups) {
+            $t = Find-Type $sub $Name
+            if ($t) { return $t }
+        }
+        return $null
+    }
+
+    $block = Find-Block $plc.BlockGroup $BlockName
+    if (-not $block) { $block = Find-Type $plc.TypeGroup $BlockName }
     if (-not $block) { Write-Error "Block '$BlockName' not found."; exit 1 }
 
     if ($OutputPath) {
         $resolved = [System.IO.Path]::GetFullPath($OutputPath)
         if (Test-Path $resolved) { Remove-Item $resolved -Force }
-        $block.Export([System.IO.FileInfo]::new($resolved), [Siemens.Engineering.ExportOptions]::WithDefaults)
+        try {
+            $block.Export([System.IO.FileInfo]::new($resolved), [Siemens.Engineering.ExportOptions]::WithDefaults)
+        } catch {
+            # Fallback: GenerateSource (works for UDTs in online mode)
+            $svc = Invoke-GenericGetService $block ([Siemens.Engineering.SW.ExternalSources.IExternalSourceGeneratable])
+            if ($svc) { $svc.GenerateSource([System.IO.FileInfo]::new($resolved)) }
+            else { throw }
+        }
         Write-Host $resolved
     } else {
         $tmp = [System.IO.Path]::GetTempFileName() + ".xml"
         try {
-            $block.Export([System.IO.FileInfo]::new($tmp), [Siemens.Engineering.ExportOptions]::WithDefaults)
-            Get-Content $tmp -Raw
+            try {
+                $block.Export([System.IO.FileInfo]::new($tmp), [Siemens.Engineering.ExportOptions]::WithDefaults)
+                Get-Content $tmp -Raw
+            } catch {
+                # Fallback: GenerateSource to .scl
+                $tmpScl = [System.IO.Path]::GetTempFileName() + ".scl"
+                try {
+                    $svc = Invoke-GenericGetService $block ([Siemens.Engineering.SW.ExternalSources.IExternalSourceGeneratable])
+                    if ($svc) {
+                        $svc.GenerateSource([System.IO.FileInfo]::new($tmpScl))
+                        Get-Content $tmpScl -Raw
+                    } else { throw "GenerateSource not available" }
+                } finally {
+                    Remove-Item $tmpScl -Force -ErrorAction SilentlyContinue
+                }
+            }
         } finally {
             Remove-Item $tmp -Force -ErrorAction SilentlyContinue
         }

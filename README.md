@@ -94,9 +94,9 @@ The Node MCP server exposes typed tool schemas with Zod and dispatches each tool
 | `move_type_to_group` | Move an existing PLC data type into a PLC data types group. |
 | `compile` | Compile the PLC software and return error and warning messages. |
 | `list_tags` | List PLC tags across the default and user-defined tag tables. |
-| `add_tag` | Add a tag to the default or a named tag table. |
+| `create_tag` | Add a tag to the default or a named tag table. |
 | `list_templates` | List available XML templates with purpose and token placeholders. |
-| `new_block` | Render a verified XML template, import it, and compile it. |
+| `create_block` | Render a verified XML template, import it, and compile it. |
 | `build_lad_block` | Generate and import a LAD FC, FB, or OB from a structured JSON flow description. |
 | `delete_item` | Delete a named PLC block or PLC data type. |
 | `preview_block` | Render a template to XML without importing it into TIA. |

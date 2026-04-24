@@ -1,17 +1,22 @@
 param(
-    [Parameter(Mandatory)][string]$BlockName,
+    [Parameter(Mandatory)][string]$Name,
+    [ValidateSet("Auto", "Block", "DataType", "Tag", "TagTable")][string]$Kind = "Auto",
     [string]$ProjectMatch = "Testing_Playground"
 )
 
-# Deletes a PLC block (FB/FC/OB/DB) or PLC data type (UDT) by name.
-# Searches recursively through all Program Block groups first, then PLC data type groups.
-# Output: { "BlockName": "FC_Old", "Deleted": true, "Kind": "Block"|"DataType" }
+# Surgical delete of any named item from the open TIA Portal project.
+# Supported kinds:
+#   Block     - PLC blocks (FB/FC/OB/DB), searched recursively under Program Blocks.
+#   DataType  - User PLC data types (UDT), searched recursively under PLC data types.
+#   Tag       - PLC tags, searched across all tag tables (recursively through groups).
+#   TagTable  - User-defined tag tables (the default tag table is protected).
+#   Auto      - Tries Block, then DataType, then Tag, then TagTable. Returns the first match.
 #
-# Exit code 0 = success (deleted or not found), 1 = error
+# Output (JSON, one line):
+#   { "Name": "...", "Deleted": true|false, "Kind": "Block"|"DataType"|"Tag"|"TagTable"|null,
+#     "Container": "..."|null, "Reason": "..."|null }
 #
-# Usage:
-#   .\scripts\delete-item.ps1 -BlockName FC_Old
-#   .\scripts\delete-item.ps1 -BlockName UDT_Foo -ProjectMatch MyProject
+# Exit code 0 = command ran (whether item was found or not), 1 = error.
 
 $ErrorActionPreference = "Stop"
 
@@ -27,16 +32,6 @@ function Invoke-GenericGetService {
     try { return $method.MakeGenericMethod($ServiceType).Invoke($Instance, $null) } catch { return $null }
 }
 
-function Find-PlcSoftware {
-    param($Project)
-    $ct = [Siemens.Engineering.HW.Features.SoftwareContainer]
-    foreach ($device in $Project.Devices) {
-        $r = Search-Items $device.DeviceItems $ct
-        if ($r) { return $r }
-    }
-    return $null
-}
-
 function Search-Items {
     param($Items, [Type]$CT)
     foreach ($item in $Items) {
@@ -48,23 +43,16 @@ function Search-Items {
     return $null
 }
 
-# ── Attach ────────────────────────────────────────────────────────────────────
-$tiaProcess = $null
-foreach ($p in [Siemens.Engineering.TiaPortal]::GetProcesses()) {
-    if ($p.Mode -ne [Siemens.Engineering.TiaPortalMode]::WithUserInterface) { continue }
-    $wp = Get-Process -Id $p.Id -ErrorAction SilentlyContinue
-    if ($wp.MainWindowTitle -match $ProjectMatch) { $tiaProcess = $p; break }
+function Find-PlcSoftware {
+    param($Project)
+    $ct = [Siemens.Engineering.HW.Features.SoftwareContainer]
+    foreach ($device in $Project.Devices) {
+        $r = Search-Items $device.DeviceItems $ct
+        if ($r) { return $r }
+    }
+    return $null
 }
-if (-not $tiaProcess) { Write-Error "No UI TIA process matching '$ProjectMatch' found."; exit 1 }
 
-$tia = $tiaProcess.Attach()
-$project = $tia.Projects | Where-Object { $_.Name -match $ProjectMatch } | Select-Object -First 1
-if (-not $project) { $project = $tia.Projects[0] }
-
-$plcSw = Find-PlcSoftware $project
-if (-not $plcSw) { Write-Error "Could not find PlcSoftware."; exit 1 }
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
 function Find-Block {
     param($Group, [string]$Name)
     foreach ($b in $Group.Blocks) { if ($b.Name -eq $Name) { return $b } }
@@ -79,21 +67,99 @@ function Find-DataType {
     return $null
 }
 
-# ── Find and delete ───────────────────────────────────────────────────────────
-$item = Find-Block $plcSw.BlockGroup $BlockName
-$kind = "Block"
-
-if (-not $item) {
-    $item = Find-DataType $plcSw.TypeGroup $BlockName
-    $kind = "DataType"
+function Find-Tag {
+    param($Group, [string]$Name)
+    foreach ($table in $Group.TagTables) {
+        $tag = $table.Tags.Find($Name)
+        if ($tag) { return @{ Tag = $tag; Table = $table.Name } }
+    }
+    foreach ($sub in $Group.Groups) {
+        $r = Find-Tag -Group $sub -Name $Name
+        if ($r) { return $r }
+    }
+    return $null
 }
 
-if (-not $item) {
-    @{ BlockName = $BlockName; Deleted = $false; Reason = "Block not found" } |
-        ConvertTo-Json -Compress
-    exit 0
+function Find-TagTable {
+    # The first tag table in the root group is the default ("Default tag table") and cannot be deleted.
+    param($RootGroup, [string]$Name)
+    $i = 0
+    foreach ($table in $RootGroup.TagTables) {
+        if ($table.Name -eq $Name) {
+            return @{ Table = $table; Group = "<root>"; IsDefault = ($i -eq 0) }
+        }
+        $i++
+    }
+    foreach ($sub in $RootGroup.Groups) {
+        foreach ($table in $sub.TagTables) {
+            if ($table.Name -eq $Name) {
+                return @{ Table = $table; Group = $sub.Name; IsDefault = $false }
+            }
+        }
+    }
+    return $null
 }
 
-$item.Delete()
+# ── Attach ────────────────────────────────────────────────────────────────────
+$tiaProcess = $null
+foreach ($p in [Siemens.Engineering.TiaPortal]::GetProcesses()) {
+    if ($p.Mode -ne [Siemens.Engineering.TiaPortalMode]::WithUserInterface) { continue }
+    $wp = Get-Process -Id $p.Id -ErrorAction SilentlyContinue
+    if ($wp.MainWindowTitle -match $ProjectMatch) { $tiaProcess = $p; break }
+}
+if (-not $tiaProcess) { Write-Error "No UI TIA process matching '$ProjectMatch' found."; exit 1 }
 
-@{ BlockName = $BlockName; Deleted = $true; Kind = $kind } | ConvertTo-Json -Compress
+$tia = $tiaProcess.Attach()
+try {
+    $project = $tia.Projects | Where-Object { $_.Name -match $ProjectMatch } | Select-Object -First 1
+    if (-not $project) { $project = $tia.Projects[0] }
+    $plcSw = Find-PlcSoftware $project
+    if (-not $plcSw) { Write-Error "Could not find PlcSoftware."; exit 1 }
+
+    $kindsToTry = if ($Kind -eq "Auto") { @("Block", "DataType", "Tag", "TagTable") } else { @($Kind) }
+
+    foreach ($k in $kindsToTry) {
+        switch ($k) {
+            "Block" {
+                $b = Find-Block $plcSw.BlockGroup $Name
+                if ($b) {
+                    $b.Delete()
+                    @{ Name = $Name; Deleted = $true; Kind = "Block"; Container = $null; Reason = $null } | ConvertTo-Json -Compress
+                    exit 0
+                }
+            }
+            "DataType" {
+                $t = Find-DataType $plcSw.TypeGroup $Name
+                if ($t) {
+                    $t.Delete()
+                    @{ Name = $Name; Deleted = $true; Kind = "DataType"; Container = $null; Reason = $null } | ConvertTo-Json -Compress
+                    exit 0
+                }
+            }
+            "Tag" {
+                $r = Find-Tag -Group $plcSw.TagTableGroup -Name $Name
+                if ($r) {
+                    $r.Tag.Delete()
+                    @{ Name = $Name; Deleted = $true; Kind = "Tag"; Container = $r.Table; Reason = $null } | ConvertTo-Json -Compress
+                    exit 0
+                }
+            }
+            "TagTable" {
+                $r = Find-TagTable -RootGroup $plcSw.TagTableGroup -Name $Name
+                if ($r) {
+                    if ($r.IsDefault) {
+                        @{ Name = $Name; Deleted = $false; Kind = "TagTable"; Container = $r.Group; Reason = "Default tag table cannot be deleted" } | ConvertTo-Json -Compress
+                        exit 0
+                    }
+                    $r.Table.Delete()
+                    @{ Name = $Name; Deleted = $true; Kind = "TagTable"; Container = $r.Group; Reason = $null } | ConvertTo-Json -Compress
+                    exit 0
+                }
+            }
+        }
+    }
+
+    @{ Name = $Name; Deleted = $false; Kind = $null; Container = $null; Reason = "Not found (searched: $($kindsToTry -join ', '))" } | ConvertTo-Json -Compress
+} finally {
+    $tia.Dispose()
+}

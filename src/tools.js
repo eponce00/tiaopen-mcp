@@ -117,7 +117,7 @@ const HINT_LAD_XML = `
 - OR gate: Part Name="O" (NOT "Or") — requires <TemplateValue Name="Card" Type="Cardinality">2</TemplateValue>
 - Set coil: Part Name="SCoil" | Reset coil: Part Name="RCoil" | Normal coil: Part Name="Coil"
 - Powerrail can connect to multiple contacts in one Wire element (branch from rail)
-- TON timer DB must pre-exist before write_block import — create it first via new_block ton-timer
+- TON timer DB must pre-exist before write_block import — create it first via create_block ton-timer
 - XML comments (<!-- -->) are NOT allowed inside <ObjectList> — TIA rejects them as schema violations
 - Each <Access Scope="Address"> holds exactly ONE <Address> child element
 - Namespace: xmlns="http://www.siemens.com/automation/Openness/SW/NetworkSource/FlgNet/v5"`;
@@ -1003,7 +1003,7 @@ Example workflow to organise Kistler PLC data types:
   },
 
   {
-    name: 'add_tag',
+    name: 'create_tag',
     description: 'Add a new PLC tag to the default tag table (or a named table) in the open TIA Portal project.',
     inputSchema: {
       type: 'object',
@@ -1034,7 +1034,7 @@ Example workflow to organise Kistler PLC data types:
   {
     name: 'list_templates',
     description:
-      'List all available XML block templates. Returns each template name (pass as `template` to new_block), its purpose description, and the token placeholder names it uses. Always call this before new_block to discover what templates exist and which params they need.',
+      'List all available XML block templates. Returns each template name (pass as `template` to create_block), its purpose description, and the token placeholder names it uses. Always call this before create_block to discover what templates exist and which params they need.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
       const files = walkTemplates(TEMPLATES);
@@ -1047,7 +1047,7 @@ Example workflow to organise Kistler PLC data types:
   },
 
   {
-    name: 'new_block',
+    name: 'create_block',
     description: `Create a new PLC block from a verified XML template, import it into TIA Portal, and compile.
 
 WORKFLOW: Call list_templates first to see available templates and required token names.
@@ -1186,7 +1186,7 @@ Simple contact → coil:
 Two contacts in series (AND):
   flow: [ {type:"contact", addr:"%I0.0"}, {type:"contact", addr:"%I0.1", negated:true}, {type:"coil", addr:"%Q0.0"} ]
 
-TON timer (create instance DB first via create_instance_db or new_block ton-timer template):
+TON timer (create instance DB first via create_instance_db or create_block ton-timer template):
   flow: [
     {type:"contact", addr:"%I0.0"},
     {type:"part", name:"TON", pins:{ IN:"%M0.0", PT:{literal:"T#5S"}, Q:"%Q0.1", ET:null }},
@@ -1263,16 +1263,29 @@ OR parallel block:
 
   {
     name: 'delete_item',
-    description: 'Delete any named item from the open TIA Portal project: PLC blocks (FB/FC/OB/DB), PLC data types (UDT), or — in future — tags and tag tables. Searches recursively through all groups. Returns confirmation JSON with the Kind of item deleted.',
+    description: `Surgically delete any named item from the open TIA Portal project. Supported kinds:
+- Block     → PLC blocks (FB/FC/OB/DB), searched recursively under Program Blocks.
+- DataType  → User PLC data types (UDT), searched recursively under PLC data types.
+- Tag       → PLC tags, searched across all tag tables.
+- TagTable  → User-defined tag tables (the default tag table is protected and cannot be deleted).
+- Auto (default) → Tries Block → DataType → Tag → TagTable; deletes the first match.
+Pass an explicit kind when names could collide between categories (e.g. a block and a tag with the same name). Returns JSON: { Name, Deleted, Kind, Container, Reason }.`,
     inputSchema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Name of the item to delete, e.g. "FC_Old", "UDT_MyType".' },
+        name: { type: 'string', description: 'Name of the item to delete, e.g. "FC_Old", "UDT_MyType", "myTag", "MyTable".' },
+        kind: {
+          type: 'string',
+          enum: ['Auto', 'Block', 'DataType', 'Tag', 'TagTable'],
+          description: 'Optional. Restrict the search to a specific kind. Defaults to "Auto".',
+        },
       },
       required: ['name'],
     },
-    handler: async ({ name }) => {
-      const result = await runPs(join(SCRIPTS, 'delete-item.ps1'), ['-BlockName', name]);
+    handler: async ({ name, kind }) => {
+      const args = ['-Name', name];
+      if (kind) args.push('-Kind', kind);
+      const result = await runPs(join(SCRIPTS, 'delete-item.ps1'), args);
       return withSaveProjectNudgeIfSuccess(result, JSON.stringify(result, null, 2));
     },
   },
@@ -1282,8 +1295,8 @@ OR parallel block:
     name: 'preview_block',
     description:
       'Render a template with params substituted and return the resolved XML — WITHOUT importing into TIA Portal. ' +
-      'Use this to verify the generated XML looks correct before calling new_block. ' +
-      'Accepts the same `template` and `params` arguments as new_block.',
+      'Use this to verify the generated XML looks correct before calling create_block. ' +
+      'Accepts the same `template` and `params` arguments as create_block.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1293,7 +1306,7 @@ OR parallel block:
         },
         params: {
           type: 'object',
-          description: 'Same param names as new_block. BlockName is required.',
+          description: 'Same param names as create_block. BlockName is required.',
           additionalProperties: { type: 'string' },
         },
       },
@@ -1343,7 +1356,7 @@ OR parallel block:
     name: 'create_tag_table',
     description:
       'Create a new user-defined PLC tag table in the open TIA Portal project. ' +
-      'After creation, use add_tag with the table name to populate it.',
+      'After creation, use create_tag with the table name to populate it.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1353,7 +1366,7 @@ OR parallel block:
     },
     handler: async ({ table_name }) => {
       const result = await runPs(join(SCRIPTS, 'new-tag-table.ps1'), ['-TableName', table_name]);
-      const text = withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Tag table created. Use \`add_tag\` to populate it, then \`compile\` to verify consistency.`);
+      const text = withHint(JSON.stringify(result, null, 2), `\n---\n⚡ Tag table created. Use \`create_tag\` to populate it, then \`compile\` to verify consistency.`);
       return withSaveProjectNudgeIfSuccess(result, text);
     },
   },
@@ -1389,7 +1402,7 @@ OR parallel block:
     description:
       'Create an instance DB for a user-defined Function Block (FB) already in the project. ' +
       'NOTE: Does NOT work for system FBs (TON, TOF, CTU, etc.) — TIA manages those internally. ' +
-      'System FB instance DBs are created automatically when using the ton-timer / ctu-counter templates via new_block.',
+      'System FB instance DBs are created automatically when using the ton-timer / ctu-counter templates via create_block.',
     inputSchema: {
       type: 'object',
       properties: {
