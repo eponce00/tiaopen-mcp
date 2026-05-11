@@ -1,4 +1,4 @@
-﻿# Lessons Learned â€” TIA Portal Openness
+﻿# Lessons Learned -- TIA Portal Openness
 
 Hard-won operational lessons from the first end-to-end Openness automation session.
 Each item documents a real failure, its root cause, and the resolution.
@@ -31,11 +31,11 @@ Each item documents a real failure, its root cause, and the resolution.
 
 **Why:** TIA Portal owns the project file exclusively. A second process cannot open it.
 
-**Fix:** Use `TiaPortal.GetProcesses()` to find the existing UI process and call `Attach()` on it. Then access `tia.Projects[0]` â€” the project is already loaded there.
+**Fix:** Use `TiaPortal.GetProcesses()` to find the existing UI process and call `Attach()` on it. Then access `tia.Projects[0]` — the project is already loaded there.
 
 ---
 
-## 4. PlcSoftware is not on the project directly â€” you must walk the device tree
+## 4. PlcSoftware is not on the project directly — you must walk the device tree
 
 **What happened:** Enumerated `project.Devices` expecting to find `PlcSoftware` directly. It was not there.
 
@@ -47,7 +47,7 @@ Each item documents a real failure, its root cause, and the resolution.
 
 ## 5. PlcSoftware does not expose a public Compile() method directly
 
-**What happened:** Tried `$plcSoftware.Compile()` â€” method not found. Tried reflection for a method named `Compile` on the type â€” not found either.
+**What happened:** Tried `$plcSoftware.Compile()` — method not found. Tried reflection for a method named `Compile` on the type — not found either.
 
 **Why:** The compile capability is exposed through a service interface `ICompilable`, not directly on `PlcSoftware`.
 
@@ -75,7 +75,7 @@ Inconsistent blocks and PLC data types (UDT) cannot be exported.
 The export cannot be made because the file already exists.
 ```
 
-**Why:** By design â€” TIA does not overwrite.
+**Why:** By design — TIA does not overwrite.
 
 **Fix:** `Remove-Item $outputPath -Force` before every export call.
 
@@ -87,7 +87,7 @@ The export cannot be made because the file already exists.
 
 **Why:** The XML block content passed structural validation (so TIA started the import) but TIA's internal network builder could not resolve the LAD objects in the `FlgNet` (e.g., `IdentCon` on a `Part` instead of an `Access`).
 
-**Fix:** Cancel the dialog. Fix the XML. The correct operand wire pattern has `IdentCon` on the **Access** side and `NameCon Name="operand"` on the **Part** side â€” not the other way around. See the verified template in `docs/openness-patterns.md` section 7.
+**Fix:** Cancel the dialog. Fix the XML. The correct operand wire pattern has `IdentCon` on the **Access** side and `NameCon Name="operand"` on the **Part** side — not the other way around. See the verified template in `docs/openness-patterns.md` section 7.
 
 ---
 
@@ -95,7 +95,7 @@ The export cannot be made because the file already exists.
 
 **What happened:** Initial guess had `IdentCon` pointing to the `Part` UId in the operand wire. Got the hung import.
 
-**Why:** `IdentCon` is an "identity connection" â€” it means "this end has no named pin, just an identity". That is the Access/operand side. The instruction pin side always uses `NameCon Name="operand"`.
+**Why:** `IdentCon` is an "identity connection" — it means "this end has no named pin, just an identity". That is the Access/operand side. The instruction pin side always uses `NameCon Name="operand"`.
 
 **Verified correct pattern:**
 ```xml
@@ -365,5 +365,267 @@ Also always set the `Connection` property on the tag when creating external tags
 - Unified: `HmiSoftware.TagTables`, `HmiSoftware.Connections`, `HmiSoftware.Tags`
 
 **Fix:** Use the Unified property names. Diagnostic-dump `$hmiSoftware.GetType().GetProperties()` if unsure.
+
+---
+
+## 28. HmiCircle uses CenterX / CenterY / Radius -- not Left/Top/Width/Height
+
+**What happened:** Setting `$circle.Left` / `$circle.Top` / `$circle.Width` / `$circle.Height` on an `HmiCircle` silently does nothing -- the LED renders at (0,0) with default size.
+
+**Root cause:** Unlike rectangles, text, and IO fields, `HmiCircle` exposes geometry as `CenterX` (int), `CenterY` (int), and `Radius` (uint32). The `Left`/`Top`/`Width`/`Height` properties don't exist on the type.
+
+**Fix:** Detect the property set and dispatch:
+```powershell
+if ($item.GetType().GetProperty('Left')) {
+    $item.Left = $L; $item.Top = $T; $item.Width = [uint32]$W; $item.Height = [uint32]$H
+} elseif ($item.GetType().GetProperty('CenterX')) {
+    $item.CenterX = $L + [int]($W/2); $item.CenterY = $T + [int]($H/2)
+    $item.Radius  = [uint32]([int]([Math]::Min($W,$H)/2))
+}
+```
+
+---
+
+## 29. PowerShell variable names are case-insensitive -- this bites color palettes
+
+**What happened:** A palette had `$Accent = [Color]::FromArgb(...)`, then later code created a rectangle: `$accent = _NewItem ...`. The rectangle assignment silently overwrote the color palette entry, and subsequent `_Place $accent ...` calls placed a Color value -- runtime threw a property-not-found error far from the cause.
+
+**Root cause:** PS treats `$Accent` and `$accent` as the same variable.
+
+**Fix:** Don't reuse palette names for local widget references. Suffix locals (`$accentRect`, `$alarmRect`) or scope colors into a hashtable `$C.Accent`.
+
+---
+
+## 30. Em-dash (and other non-ASCII) in PowerShell source = mojibake at runtime
+
+**What happened:** A build script with `-Text 'a -- b'` (real em-dash) rendered on the HMI as `a a"" b`.
+
+**Root cause:** Windows PowerShell 5.1 opens `.ps1` files as ANSI (CP1252). A script saved as UTF-8 without BOM gets its UTF-8 bytes (e.g. `0xE2 0x80 0x94` for em-dash) misread as CP1252 (`a`+`EUR`+`"`). That mojibake string gets passed verbatim into the `MultilingualText` XML and rendered.
+
+**Fix (pick one):**
+- Stick to ASCII in label strings (`-`, `:`, `...`).
+- Save scripts as UTF-8 **with BOM** so PS5.1 picks the right decoder.
+- Or move to PowerShell 7+, which defaults to UTF-8.
+
+---
+
+## 31. `MappingTable.ConditionType` -- use `Singlebit` for single-bit watch, not `Bitmask`
+
+**What happened:** A `TagDynamization` on `BackColor` of an LED wired to a DWord status word was first written using `Bitmask`. The LED never changed color even though the bit was set.
+
+**Root cause:** `Bitmask` is a Boolean-AND comparator (multiple bits all-must-be-set); `Singlebit` does the bit extraction TIA's runtime expects for "this LED follows bit N." The two condition types are NOT interchangeable.
+
+**Fix:** For one-bit-of-DWord LEDs, set `mt.SetAttribute('ConditionType', 'Singlebit')` and seed exactly 2 entries (off / on). The `Condition` property on entry[1] is a `UInt64` mask = `2^bit`. (`Relevant` is read-only -- TIA auto-syncs it from `Condition`.)
+
+---
+
+## 32. Bit-access in tag paths (`.%X<n>`) is rejected -- always extract via Singlebit MappingTable
+
+**What happened:** Tried every plausible TIA bit-access syntax to bind an LED's `Visible` straight to a bit of a DWord HMI tag: `tag.%X3`, `tag.X3`, `tag[3]`, etc. All rejected by Openness or by the runtime.
+
+**Root cause:** WinCC Unified `TagDynamization.Tag` only accepts whole-tag paths. Bit extraction is the job of the `MappingTable` (see lesson 31). Pre-creating per-bit Bool HMI tags backed by `PlcTag` with bit-access syntax also fails (`set_PlcTag` rejects the syntax).
+
+**Fix:** One DWord HMI tag + one `Singlebit` mapping table per LED. This is the only path that compiles cleanly.
+
+---
+
+## 33. The HMI widget-direction rule: `HmiText` for FB-owned values, `HmiIOField` only for operator setpoints
+
+**What happened:** Used `HmiIOField` with `IOFieldType = Output` for read-only displays (plant name, current MP, jog speed). Operators complained that the values look editable -- the box still renders with a focus border.
+
+**Root cause:** "Output" mode disables typing but does NOT change the visual treatment. To an operator it's indistinguishable from an input.
+
+**Rule (canonical):**
+- **Anything sourced FROM the device** (string OR number, OR formatted) -> `HmiText` with `TagDynamization` on the `Text` property.
+- **Anything the operator types INTO** (setpoints, target MP, target speed) -> `HmiIOField InputOutput` with `TagDynamization` on `ProcessValue`.
+- **`HmiIOField Output` is effectively never the right answer.**
+
+Mnemonic: *"If the operator types into it, it's an IOField. Otherwise it's a Text."*
+
+---
+
+## 34. `[System.Drawing.Color]$Param = $null` is a parser error
+
+**What happened:** A function signature `[System.Drawing.Color]$HeaderColor = $null` failed at parse time.
+
+**Root cause:** `System.Drawing.Color` is a value-type struct -- it cannot be null.
+
+**Fix:** Drop the type constraint on optional Color params; use a runtime `if (-not $HeaderColor) { $HeaderColor = $script:Colors.Default }` instead.
+
+---
+
+## 35. Empty `[string]` parameters need `[AllowEmptyString()]`
+
+**What happened:** `Add-Label -Text ''` (e.g. for a transparent placeholder rectangle) threw "Cannot bind argument to parameter 'Text' because it is an empty string."
+
+**Fix:** Decorate the param: `[Parameter(Mandatory)] [AllowEmptyString()] [string]$Text`.
+
+---
+
+## 36. `${($var.Prop)}` is NOT a valid PowerShell interpolation -- use `$($var.Prop)`
+
+**What happened:** Generated item names like `"eo${($eo.N)}_byte"` came out as `"eo_byte"`, then TIA threw `ValueIsNotUnique` because every row collided on the same name.
+
+**Root cause:** PS only allows simple variable names inside `${...}`. Property expressions need `$(...)`.
+
+**Fix:** `"eo$($eo.N)_byte"`.
+
+---
+
+## 37. `HmiLine.Point1` / `Point2` are value-type accessors -- mutations don't persist
+
+**What happened:** Tried to draw a vertical separator with `HmiLine`. Setting `$line.Point1.X = 100` had no effect at runtime; the line still rendered diagonally from a default position.
+
+**Root cause:** `Point1`/`Point2` return value-type `Point` structs by value. Mutating the returned copy doesn't write back.
+
+**Fix:** Either construct a new `Point` and assign it whole (if the API allows), or just use a thin `HmiRectangle` -- which is what most "lines" should be anyway for crisp rendering.
+
+---
+
+## 38. Font properties are set via `SetAttribute('Size', byte)` / `SetAttribute('Weight', string)`
+
+**What happened:** Tried `$item.Font.Size = 14` and `$item.Font.Weight = 'Bold'` -- both threw "property is read-only."
+
+**Root cause:** `Font` is exposed as a "part" (`HmiFontPart`) whose values are set via `SetAttribute(name, value)`, not direct properties. `Size` requires `[byte]`; `Weight` is a string enum (`'Regular'`, `'Bold'`).
+
+**Fix:**
+```powershell
+$item.Font.SetAttribute('Size',   [byte]14)
+$item.Font.SetAttribute('Weight', 'Bold')
+```
+
+The same `SetAttribute` pattern applies to `ForeColor` on some text items, although `ForeColor` is also exposed as a regular settable property on most widgets -- try the property first.
+
+---
+
+## 39. `MultilingualText` accepts `<body><p>text</p></body>` -- no inline CSS
+
+**What happened:** Tried `<body><p style="color:#fff;font-size:14pt">Hello</p></body>` to set inline color/size. TIA rejected the import.
+
+**Root cause:** TIA's `MultilingualText.Text` parser only accepts the plain body/paragraph wrapper. Styling must come from sibling properties (`Font`, `ForeColor`, `HorizontalTextAlignment`), not inline CSS.
+
+**Fix:** Set the text to `<body><p>plain text</p></body>` and apply styling via the widget's own properties (see lesson 38).
+
+---
+
+## 40. Button command scripts: read-modify-write the DWord via `Tags("path").Read()/.Write()`
+
+**What happened:** First button attempt assigned a single Bool tag for a "Jog Up" command. The PLC interface uses a DWord (`move`) where each bit is a different command -- so a Bool-per-button approach can't coexist with hold-modifier and jog-while-pressed semantics.
+
+**Root cause:** Multi-command shared DWords need atomic read-modify-write per button.
+
+**Fix:** Wire the button's events with `HmiButtonEventType` (`Activated` + `Deactivated` for hold, `Tapped` for toggle) and put a script that does:
+```javascript
+// Hold pattern (Activated)
+var v = Tags("MVterminalPressKistler.move").Read();
+Tags("MVterminalPressKistler.move").Write(v | <mask>);
+// Deactivated
+var v = Tags("MVterminalPressKistler.move").Read();
+Tags("MVterminalPressKistler.move").Write(v & ~<mask>);
+```
+For "echo" (button lights up while command is in flight): bind the button's `BackColor` to `send.control` via a Singlebit mapping table on the echoed bit.
+
+---
+
+## 41. Multi-user projects: save via `$session.Save()` -- NOT `$project.Save()`
+
+**What happened:** `$project.Save()` on a multi-user project either threw or silently no-op'd.
+
+**Root cause:** Multi-user projects expose save through the local-session object, not the project.
+
+**Fix:**
+```powershell
+$session = $tia.LocalSessions[0]
+$project = $session.Project
+# ... mutations ...
+$session.Save()
+```
+
+If `LocalSessions` is empty, the project isn't multi-user and `$project.Save()` is correct.
+
+---
+
+## 42. HMI compile: walk up from `HmiSoftware` to find `ICompilable`
+
+**What happened:** `$hmi.GetService([ICompilable])` returned null. Compile attempted on the wrong object.
+
+**Root cause:** `ICompilable` is exposed on the parent device (the HMI station), not on `HmiSoftware` itself.
+
+**Fix:** Walk up `$hmi.Parent` until `GetService<ICompilable>()` returns a non-null provider, then call `.Compile()` on it.
+
+```powershell
+$cur = $hmi.Parent; $comp = $null
+while ($cur -and -not $comp) {
+    $gs = $cur.GetType().GetMethods() | Where-Object { $_.Name -eq 'GetService' -and $_.IsGenericMethodDefinition } | Select-Object -First 1
+    if ($gs) { try { $comp = $gs.MakeGenericMethod($iCompilable).Invoke($cur, $null) } catch {} }
+    $cur = $cur.Parent
+}
+$result = $comp.Compile()
+```
+
+---
+
+## 43. Layout invariants: enforce proactively at every Add, not just retroactively in a test pass
+
+**What happened:** First HMI build relied on a post-build test suite to catch overlaps, off-screen items, and orphaned children. Errors surfaced only after a 30-second build + compile cycle. Fixing required another full cycle. Iteration was painful.
+
+**Better pattern (verified on Kistler):** Wrap every item-creation call (`Add-Label`, `Add-Button`, `Add-DisplayValue`, etc.) in a helper that:
+1. Computes the AABB before TIA is touched.
+2. Asserts the AABB is inside screen bounds AND inside the parent card AND doesn't overlap interactive siblings already registered to that card.
+3. Throws with a precise, operator-readable message (item name, coordinates, conflicting sibling).
+4. Only then creates the item and registers it as a child of the card.
+
+The same invariants are also packaged as a `Test-LayoutSelfCheck` function that runs over the in-memory card/child registry before save. Pre-save validation aborts a broken build before TIA even sees it.
+
+**Result:** Layout bugs fail in <100 ms at the offending call site, not 30 s later in a separate test. See the Kistler design framework (`kistler-design.ps1`) for the reference implementation. Six rules are enforced: screen-bounds, card-card overlap, child-in-card, sibling overlap (interactive widgets only -- HmiRectangle excluded so backgrounds don't poison the test), orphan detector (every item must be registered), text-fits-width heuristic.
+
+---
+
+## 44. Don't rebuild the whole screen for cosmetic fixes -- use surgical post-edits
+
+**What happened:** Found six labels with mojibake em-dash text after build. Reflex was to rebuild the entire screen (slow). Better: a 30-line script that attaches to TIA, finds items by name pattern, mutates only the affected `MultilingualText.Text` xml, calls `$session.Save()`. Sub-second.
+
+**Rule:** If the change touches <10% of items and doesn't alter layout, write a targeted post-edit. Update the build script source so the next full rebuild stays consistent, but don't pay the rebuild cost just to validate the source edit.
+
+Template:
+```powershell
+foreach ($it in $screen.ScreenItems) {
+    if ($it.Name -match '<your pattern>') {
+        $mlt = $it.GetType().GetProperty('Text').GetValue($it)
+        foreach ($mi in $mlt.Items) { $mi.SetAttribute('Text', '<body><p>new</p></body>') }
+    }
+}
+$session.Save()
+```
+
+---
+
+## 45. Verify FB bit maps from XML, not from the FB's text-list -- texts drift
+
+**What happened:** First Kistler UDT bit assignments came from copy-pasting the FB's alarm text list. Multiple bits were off-by-one because the text list had been edited but the FB's coil wiring hadn't been re-synced.
+
+**Root cause:** Text-list comments are documentation; LAD coil networks are the actual behavior. They can disagree, and the FB still compiles.
+
+**Fix:** Extract bit maps directly from the FB XML by tracing each `Coil` back through its preceding `Contact`s to the source operand. A 50-line Python parser (`extract_bit_map.py` in the Kistler memory) does this for an entire FB and produces a ground-truth `{bit -> source_tag}` table.
+
+---
+
+## 46. `EngineeringObjectDisposedException` -- TIA objects expire on UI focus changes
+
+**What happened:** Long-running PowerShell sessions that held onto a `Project` or `HmiSoftware` reference across user activity in the TIA UI started throwing `EngineeringObjectDisposedException` on subsequent property access.
+
+**Root cause:** Some TIA Openness wrappers expire when the user opens a different editor or navigates away in the UI. The reference is now stale.
+
+**Fix:** Treat handles as short-lived. Reattach (`tia.LocalSessions[0].Project`, walk for `HmiSoftware`) at the start of every script run. Don't cache them across user-perceptible time gaps.
+
+---
+
+## 47. PowerShell here-strings and the script's encoding interact badly with TIA XML
+
+**What happened:** A here-string containing UTF-8 special characters (degree sign, non-breaking space) injected into a `MultilingualText.SetAttribute('Text', ...)` produced garbled runtime text.
+
+**Root cause:** Same as lesson 30 -- the PS source file's encoding controls how the literal bytes reach .NET. Once they're wrong inside the script string, every downstream API call propagates the corruption.
+
+**Fix:** Either keep the script ASCII-only and use numeric XML entities (`&#176;` for `°`), or save the script as UTF-8 with BOM. Validate by running `python -c "open(r'...','rb').read()[:200]"` and inspecting the byte sequence.
 
 ---
