@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svghmi xmlns="http://www.siemens.com/automation/svg2011/ext/nagra_hmi">
+  <parameters count="27">
+    <parameter name="JogFwd" type="Real" default="0" access="readwrite"/>
+    <parameter name="JogNeq" type="Real" default="0" access="readwrite"/>
+    <parameter name="MeasurementProgramEcho" type="Real" default="0" access="readwrite"/>
+    <parameter name="SequenceEndReset" type="Real" default="0" access="readwrite"/>
+    <parameter name="autoDriveToReferencePosition" type="Real" default="0" access="readwrite"/>
+    <parameter name="autoHomePosition" type="Real" default="0" access="readwrite"/>
+    <parameter name="autoRunSequence" type="Real" default="0" access="readwrite"/>
+    <parameter name="currentLabel" type="Real" default="0" access="readwrite"/>
+    <parameter name="driveEnabled" type="Real" default="0" access="readwrite"/>
+    <parameter name="driveenabledNOK" type="Bool" default="0" access="readwrite"/>
+    <parameter name="enableBlock" type="Real" default="0" access="readwrite"/>
+    <parameter name="extStopRequest" type="Real" default="0" access="readwrite"/>
+    <parameter name="hardwareNOK" type="Bool" default="0" access="readwrite"/>
+    <parameter name="homePos" type="Real" default="0" access="readwrite"/>
+    <parameter name="nokTotal" type="Real" default="0" access="readwrite"/>
+    <parameter name="okTotal" type="Real" default="0" access="readwrite"/>
+    <parameter name="pvCurrentValueX" type="Real" default="0" access="readwrite"/>
+    <parameter name="pvCurrentValueY" type="Real" default="0" access="readwrite"/>
+    <parameter name="pvCurve" type="Real" default="0" access="readwrite"/>
+    <parameter name="pvGradient" type="Real" default="0" access="readwrite"/>
+    <parameter name="ready" type="Real" default="0" access="readwrite"/>
+    <parameter name="referencePos" type="Real" default="0" access="readwrite"/>
+    <parameter name="remoteControlNotActive" type="Bool" default="0" access="readwrite"/>
+    <parameter name="safetyNOK" type="Bool" default="0" access="readwrite"/>
+    <parameter name="sequenceStatus" type="Real" default="0" access="readwrite"/>
+    <parameter name="serialnumbermismatch" type="Real" default="0" access="readwrite"/>
+    <parameter name="transmissionFault" type="Real" default="0" access="readwrite"/>
+  </parameters>
+  <graphics>
+    <?xml version="1.0" ?>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" class="svghmi">
+      <rect width="1200" height="800" fill="#E8E8E8"/>
+      <text x="600.0" y="25" font-family="Arial, sans-serif" font-size="18" fill="#000000" text-anchor="middle" font-weight="bold">Kistler maXYmos NC Press Controller</text>
+      <rect x="20" y="20" width="300" height="150" fill="#F5F5F5" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="30" y="40" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="start" font-weight="bold">STATUS</text>
+      <g class="indicator ready" data-param="ready">
+        <rect x="30" y="55" width="60" height="30" fill="#DCDCDC" stroke="#666" stroke-width="1" rx="4"/>
+        <circle cx="60.0" cy="70.0" r="12" fill="#CCCCCC" stroke="#666" stroke-width="1" class="led ready" data-param="ready"/>
+        <text x="60.0" y="100" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">Ready</text>
+      </g>
+      <g class="indicator okTotal" data-param="okTotal">
+        <rect x="120" y="55" width="60" height="30" fill="#DCDCDC" stroke="#666" stroke-width="1" rx="4"/>
+        <circle cx="150.0" cy="70.0" r="12" fill="#CCCCCC" stroke="#666" stroke-width="1" class="led okTotal" data-param="okTotal"/>
+        <text x="150.0" y="100" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">OK</text>
+      </g>
+      <g class="indicator nokTotal" data-param="nokTotal">
+        <rect x="210" y="55" width="60" height="30" fill="#DCDCDC" stroke="#666" stroke-width="1" rx="4"/>
+        <circle cx="240.0" cy="70.0" r="12" fill="#CCCCCC" stroke="#666" stroke-width="1" class="led nokTotal" data-param="nokTotal"/>
+        <text x="240.0" y="100" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">NOK</text>
+      </g>
+      <g class="indicator driveEnabled" data-param="driveEnabled">
+        <rect x="30" y="105" width="60" height="30" fill="#DCDCDC" stroke="#666" stroke-width="1" rx="4"/>
+        <circle cx="60.0" cy="120.0" r="12" fill="#CCCCCC" stroke="#666" stroke-width="1" class="led driveEnabled" data-param="driveEnabled"/>
+        <text x="60.0" y="150" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">Drive</text>
+      </g>
+      <g class="indicator homePos" data-param="homePos">
+        <rect x="120" y="105" width="60" height="30" fill="#DCDCDC" stroke="#666" stroke-width="1" rx="4"/>
+        <circle cx="150.0" cy="120.0" r="12" fill="#CCCCCC" stroke="#666" stroke-width="1" class="led homePos" data-param="homePos"/>
+        <text x="150.0" y="150" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">Home</text>
+      </g>
+      <g class="indicator referencePos" data-param="referencePos">
+        <rect x="210" y="105" width="60" height="30" fill="#DCDCDC" stroke="#666" stroke-width="1" rx="4"/>
+        <circle cx="240.0" cy="120.0" r="12" fill="#CCCCCC" stroke="#666" stroke-width="1" class="led referencePos" data-param="referencePos"/>
+        <text x="240.0" y="150" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">Ref</text>
+      </g>
+      <rect x="20" y="190" width="300" height="280" fill="#F5F5F5" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="30" y="210" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="start" font-weight="bold">CONTROLS</text>
+      <g class="button autoRunSequence" data-param="autoRunSequence">
+        <rect x="30" y="225" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="67.5" y="247.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Start</text>
+      </g>
+      <g class="button extStopRequest" data-param="extStopRequest">
+        <rect x="180" y="225" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="217.5" y="247.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Stop</text>
+      </g>
+      <g class="button autoHomePosition" data-param="autoHomePosition">
+        <rect x="30" y="275" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="67.5" y="297.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Home</text>
+      </g>
+      <g class="button autoDriveToReferencePosition" data-param="autoDriveToReferencePosition">
+        <rect x="180" y="275" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="217.5" y="297.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Ref</text>
+      </g>
+      <g class="button JogFwd" data-param="JogFwd">
+        <rect x="30" y="325" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="67.5" y="347.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Jog+</text>
+      </g>
+      <g class="button JogNeq" data-param="JogNeq">
+        <rect x="180" y="325" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="217.5" y="347.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Jog-</text>
+      </g>
+      <g class="button SequenceEndReset" data-param="SequenceEndReset">
+        <rect x="30" y="375" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="67.5" y="397.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Reset</text>
+      </g>
+      <g class="button enableBlock" data-param="enableBlock">
+        <rect x="180" y="375" width="75" height="35" fill="#CCCCCC" stroke="#666" stroke-width="2" rx="4"/>
+        <text x="217.5" y="397.5" font-family="Arial, sans-serif" font-size="12" fill="#000000" text-anchor="middle">Enable</text>
+      </g>
+      <rect x="340" y="20" width="520" height="450" fill="white" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="350" y="40" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="start" font-weight="bold">Force vs. Displacement</text>
+      <line x1="380" y1="440" x2="840" y2="440" stroke="#000" stroke-width="2"/>
+      <line x1="380" y1="70" x2="380" y2="440" stroke="#000" stroke-width="2"/>
+      <text x="610.0" y="470" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="middle">Distance (mm)</text>
+      <text x="345" y="65" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="end">Force (N)</text>
+      <polyline points="380.0,440.0 384.6,434.08 389.2,428.16 393.8,422.24 398.4,416.32 403.0,410.4 407.6,404.48 412.2,398.56 416.8,392.64 421.4,386.72 426.0,380.79999999999995 430.6,374.88 435.2,368.96 439.8,363.03999999999996 444.4,357.12 449.0,351.2 453.6,345.28 458.2,339.36 462.8,333.44 467.4,327.52 472.0,321.59999999999997 476.6,315.68 481.2,309.76 485.8,303.84 490.4,297.91999999999996 495.0,292.0 499.6,286.08 504.2,280.15999999999997 508.8,274.24 513.4,268.32 518.0,262.4 522.6,256.48 527.2,250.55999999999997 531.8,244.64 536.4,238.71999999999997 541.0,232.80000000000004 545.6,226.88 550.2,220.96000000000004 554.8,215.03999999999996 559.4,209.11999999999998 564.0,203.2 568.6,203.2 573.2,203.2 577.8,203.2 582.4,203.2 587.0,203.2 591.6,203.2 596.2,203.2 600.8,203.2 605.4,203.2 610.0,203.2 614.6,203.2 619.2,203.2 623.8,203.2 628.4,203.2 633.0,203.2 637.6,203.2 642.2,203.2 646.8,203.2 651.4,203.2 656.0,203.2 660.5999999999999,203.2 665.2,203.2 669.8,203.2 674.4000000000001,203.2 679.0,203.2 683.6,203.2 688.2,203.2 692.8,203.2 697.4,203.2 702.0,203.2 706.5999999999999,211.09333333333328 711.2,218.98666666666668 715.8,226.88 720.4,234.77333333333334 725.0,242.6666666666667 729.6,250.56000000000003 734.2,258.4533333333334 738.8,266.3466666666667 743.4000000000001,274.24 748.0,282.1333333333334 752.6,290.02666666666676 757.2,297.91999999999996 761.8,305.8133333333333 766.4,313.7066666666667 771.0,321.6 775.5999999999999,329.49333333333334 780.2,337.3866666666667 784.8,345.28000000000003 789.4000000000001,353.1733333333334 794.0,361.0666666666667 798.6,368.96000000000004 803.2,376.8533333333334 807.8,384.7466666666667 812.4,392.64 817.0,400.53333333333336 821.5999999999999,408.4266666666667 826.2,416.32000000000005 830.8,424.21333333333337 835.4,432.1066666666667 840.0,440.00000000000006" fill="none" stroke="#0066FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="curve pvCurve" data-param="pvCurve"/>
+      <rect x="340" y="490" width="520" height="160" fill="#F5F5F5" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="350" y="510" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="start" font-weight="bold">PROCESS VALUES</text>
+      <text x="350" y="530" font-family="Arial, sans-serif" font-size="11" fill="#333" text-anchor="start">Force:</text>
+      <text x="430" y="530" font-family="Arial, sans-serif" font-size="11" fill="#0066FF" text-anchor="start" class="value pvCurrentValueY" data-param="pvCurrentValueY">0.0 N</text>
+      <text x="610" y="530" font-family="Arial, sans-serif" font-size="11" fill="#333" text-anchor="start">Distance:</text>
+      <text x="690" y="530" font-family="Arial, sans-serif" font-size="11" fill="#0066FF" text-anchor="start" class="value pvCurrentValueX" data-param="pvCurrentValueX">0.0 mm</text>
+      <text x="350" y="570" font-family="Arial, sans-serif" font-size="11" fill="#333" text-anchor="start">Gradient:</text>
+      <text x="430" y="570" font-family="Arial, sans-serif" font-size="11" fill="#0066FF" text-anchor="start" class="value pvGradient" data-param="pvGradient">0.0</text>
+      <text x="610" y="570" font-family="Arial, sans-serif" font-size="11" fill="#333" text-anchor="start">Status:</text>
+      <text x="690" y="570" font-family="Arial, sans-serif" font-size="11" fill="#0066FF" text-anchor="start" class="value sequenceStatus" data-param="sequenceStatus">IDLE</text>
+      <rect x="880" y="20" width="300" height="300" fill="#F5F5F5" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="890" y="40" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="start" font-weight="bold">MP SELECTION</text>
+      <text x="890" y="70" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="start">MP #:</text>
+      <text x="1080" y="70" font-family="Arial, sans-serif" font-size="11" fill="#0066FF" text-anchor="end" class="value mpNumber" data-param="MeasurementProgramEcho">0</text>
+      <text x="890" y="105" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="start">Sequence:</text>
+      <text x="1080" y="105" font-family="Arial, sans-serif" font-size="11" fill="#0066FF" text-anchor="end" class="value sequenceLabel" data-param="currentLabel">Main</text>
+      <text x="890" y="140" font-family="Arial, sans-serif" font-size="11" fill="#000000" text-anchor="start">Status:</text>
+      <text x="1080" y="140" font-family="Arial, sans-serif" font-size="11" fill="#00AA00" text-anchor="end" class="value readyStatus" data-param="ready">Ready</text>
+      <rect x="880" y="340" width="300" height="310" fill="#F5F5F5" stroke="#999" stroke-width="1" rx="4"/>
+      <text x="890" y="360" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="start" font-weight="bold">ALARMS &amp; FAULTS</text>
+      <circle cx="895" cy="390" r="6" fill="#CCCCCC" stroke="#666" stroke-width="1" class="alarm-led hardwareNOK" data-param="hardwareNOK"/>
+      <text x="910" y="395" font-family="Arial, sans-serif" font-size="10" fill="#000000" text-anchor="start">Hardware NOK</text>
+      <circle cx="895" cy="420" r="6" fill="#CCCCCC" stroke="#666" stroke-width="1" class="alarm-led driveenabledNOK" data-param="driveenabledNOK"/>
+      <text x="910" y="425" font-family="Arial, sans-serif" font-size="10" fill="#000000" text-anchor="start">Drive NOK</text>
+      <circle cx="895" cy="450" r="6" fill="#CCCCCC" stroke="#666" stroke-width="1" class="alarm-led safetyNOK" data-param="safetyNOK"/>
+      <text x="910" y="455" font-family="Arial, sans-serif" font-size="10" fill="#000000" text-anchor="start">Safety NOK</text>
+      <circle cx="895" cy="480" r="6" fill="#CCCCCC" stroke="#666" stroke-width="1" class="alarm-led serialnumbermismatch" data-param="serialnumbermismatch"/>
+      <text x="910" y="485" font-family="Arial, sans-serif" font-size="10" fill="#000000" text-anchor="start">Serial Mismatch</text>
+      <circle cx="895" cy="510" r="6" fill="#CCCCCC" stroke="#666" stroke-width="1" class="alarm-led transmissionFault" data-param="transmissionFault"/>
+      <text x="910" y="515" font-family="Arial, sans-serif" font-size="10" fill="#000000" text-anchor="start">Transmission</text>
+      <circle cx="895" cy="540" r="6" fill="#CCCCCC" stroke="#666" stroke-width="1" class="alarm-led remoteControlNotActive" data-param="remoteControlNotActive"/>
+      <text x="910" y="545" font-family="Arial, sans-serif" font-size="10" fill="#000000" text-anchor="start">User Mode Active</text>
+      <text x="600.0" y="790" font-family="Arial, sans-serif" font-size="9" fill="#999" text-anchor="middle">Generated for WinCC Unified SVGHMI | Kistler maXYmos NC</text>
+    </svg>
+  </graphics>
+</svghmi>

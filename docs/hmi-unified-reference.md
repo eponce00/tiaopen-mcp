@@ -403,8 +403,88 @@ $lang.EnableForLogging = $true
 6. **Text must be XML-wrapped** — plain strings are rejected with invalid format error.
 7. **Width/Height require `[uint32]`** — `[int32]` causes type conversion error.
 8. **Type namespaces differ from manual** — actual runtime types are under `UI.Shapes`/`UI.Widgets`, not `ModernUI`.
+9. **Bit-access in tag paths rejected** — `.%X<n>`, `.X<n>`, `[n]` all fail. Bind whole DWord, extract bits via `MappingTable.ConditionType=Singlebit`.
+10. **`HmiCircle` geometry uses `CenterX`/`CenterY`/`Radius`** — `Left`/`Top`/`Width`/`Height` don't exist on circles.
+11. **`HmiLine.Point1`/`Point2` return value-type structs** — mutations on the returned Point don't persist. Use a thin `HmiRectangle` instead.
+12. **Font properties via `SetAttribute`** — `Size` requires `[byte]`; `Weight` is a string enum (`'Regular'`/`'Bold'`).
+13. **HMI compile lives on the parent device** — `HmiSoftware.GetService<ICompilable>()` returns null. Walk up `Parent` until the call returns non-null.
+14. **Multi-user save** — call `$session.Save()`, not `$project.Save()`.
 
 ---
 
-*Document version: 2025-05-08*
-*Verified against: TIA Portal V20, WinCC Unified Comfort Panel*
+## 13. Widget selection by data direction (canonical rule)
+
+> **"If the operator types into it, it's an `HmiIOField` (`InputOutput`). Otherwise it's an `HmiText`."**
+
+| Direction | Data type | Widget | Property to bind |
+|---|---|---|---|
+| FB -> HMI string | any | `HmiText` | `Text` |
+| FB -> HMI number | any | `HmiText` | `Text` (runtime stringifies the value) |
+| FB -> HMI single bit of DWord | bit-of-DWord | `HmiCircle` | `BackColor` with `MappingTable.ConditionType=Singlebit`, mask=`2^bit` as `UInt64`, two entries (off/on) |
+| FB -> HMI standalone Bool | Bool | `HmiCircle` | `Visible` or `BackColor` |
+| HMI -> FB number (setpoint) | Real/Int | `HmiIOField InputOutput` | `ProcessValue` to the *Set tag |
+| HMI -> FB bit command | bit-of-DWord | `HmiButton` | `EventHandlers.Create(Activated/Deactivated)` for hold or `Tapped` for toggle; script reads/writes the DWord with the bit mask |
+
+**Why never `HmiIOField IOFieldType=Output` for read-only values:** even in Output mode the widget still renders as a boxed input control. That's misleading on FB-owned values. `HmiText` is the right call for any value the operator can't change.
+
+---
+
+## 14. Layout-aware design pattern (build proactively, validate at end)
+
+A simple-but-effective pattern for non-trivial screens (verified on a 200-item Kistler maXYmos NC console):
+
+1. **Track every card and its children in PS-side data structures** (not just in TIA's screen tree). On every `Add-*` helper:
+   - Compute the AABB
+   - Assert it fits the screen
+   - Assert it fits inside the parent card
+   - Assert it doesn't overlap any interactive sibling already in the card (`HmiText`, `HmiIOField`, `HmiButton`, `HmiCircle` -- exclude `HmiRectangle` so card backgrounds don't poison the test)
+   - Only then create the TIA item and register it as a child of the card
+
+2. **Before save, run a self-check pass** over the tracked structures: screen-bounds, card-card overlap, child-in-card, sibling overlap, orphan detector (every screen item must be registered to a card -- catches off-helper `Create` calls that forgot to register).
+
+3. **If self-check fails, abort before save** -- never let TIA see a broken layout.
+
+This converts a 30-second build-test-fix cycle into a sub-100 ms fail-at-the-offending-line. See `docs/lessons-learned.md` §43 for the rationale and the reference framework structure.
+
+---
+
+## 15. Common bind recipes (copy-paste)
+
+### Bit-of-DWord -> circle BackColor (Singlebit mapping)
+```powershell
+$dyn = $circle.Dynamizations.Create('BackColor')   # via reflected generic helper
+$dyn.SetAttribute('Tag', 'RootTag.someDword')
+$mt = $dyn.ValueConverter.MappingTable
+foreach ($e in @($mt.Entries)) { try { $e.Delete() } catch {} }
+$mt.SetAttribute('ConditionType', 'Singlebit')
+$entries = @($mt.Entries)           # 2 default entries
+$entries[1].Condition = [UInt64]([Math]::Pow(2, $bit))
+$entries[0].Value = $offColor
+$entries[1].Value = $onColor
+```
+
+### Hold-style button on a DWord command bit
+```powershell
+$evA = $btn.EventHandlers.Create([Enum]::Parse([...HmiButtonEventType], 'Activated'))
+$evA.Script.SetAttribute('ScriptCode',
+    "var v = Tags(`"RootTag.move`").Read();`r`nTags(`"RootTag.move`").Write(v | $mask);")
+$evD = $btn.EventHandlers.Create([Enum]::Parse([...HmiButtonEventType], 'Deactivated'))
+$evD.Script.SetAttribute('ScriptCode',
+    "var v = Tags(`"RootTag.move`").Read();`r`nTags(`"RootTag.move`").Write(v & ~$mask);")
+```
+
+### Read-only value display (FB -> HMI)
+```powershell
+$t = _NewItem $screen.ScreenItems $typeHmiText 'plant_value'
+_Place $t 600 26 720 36
+$t.Text.Items[0].SetAttribute('Text', '<body><p>...</p></body>')
+$t.Font.SetAttribute('Size',   [byte]18)
+$t.Font.SetAttribute('Weight', 'Bold')
+$dyn = $t.Dynamizations.Create('Text')   # via reflected generic helper
+$dyn.SetAttribute('Tag', 'RootTag.plantidentifier')
+```
+
+---
+
+*Document version: 2026-05-11*
+*Verified against: TIA Portal V20 Update 4, WinCC Unified Comfort Panel (Kistler maXYmos NC console build)*
